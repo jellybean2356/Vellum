@@ -1,0 +1,16 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vellum", "Vellum.csproj", "{B4D49A56-E892-403C-A9A9-AF0BA72C5EA5}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B4D49A56-E892-403C-A9A9-AF0BA72C5EA5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B4D49A56-E892-403C-A9A9-AF0BA72C5EA5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B4D49A56-E892-403C-A9A9-AF0BA72C5EA5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B4D49A56-E892-403C-A9A9-AF0BA72C5EA5}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
