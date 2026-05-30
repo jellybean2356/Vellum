@@ -2,6 +2,7 @@
 using System;
 using System.Runtime.InteropServices;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Vellum
 {
@@ -49,11 +50,12 @@ namespace Vellum
                 foreach (var display in displays)
                     Console.WriteLine($"Detected display id: {display}");
             
-            // debug to print all visible windows
+            // initial windows log
             List<IntPtr> openWindows = GetWindowsHandles();
+            List<IntPtr> openWindowsOld = GetWindowsHandles();
             foreach (IntPtr hwnd in openWindows)
             {
-                Console.WriteLine($"Found HWND: 0x{hwnd.ToString("X")} | Application: {GetWindowTitle(hwnd)}");
+                Console.WriteLine($"found HWND: 0x{hwnd.ToString("X")} | Application: {GetWindowTitle(hwnd)}");
             }
 
             SDL.FRect[] interactiveParts =
@@ -74,7 +76,15 @@ namespace Vellum
                         loop = false;
                     }
                 }
-
+                
+                openWindows = GetWindowsHandles();
+                var difference = openWindows.Except(openWindowsOld).ToList();
+                foreach (var hwnd in difference)
+                {
+                    Console.WriteLine($"found HWND: 0x{hwnd.ToString("X")} | Application: {GetWindowTitle(hwnd)}");
+                }
+                openWindowsOld = openWindows;
+                
                 UpdateClickTrough(window, interactiveParts);
                 
                 SDL.SetRenderDrawBlendMode(renderer, SDL.BlendMode.None);
@@ -164,11 +174,8 @@ namespace Vellum
         // helper function to get screen display ids
         private static uint[]? GetScreenDisplayIds()
         {
-            unsafe
-            {
-                uint[]? displays = SDL.GetDisplays(out int count);
-                return displays;
-            }
+            var displays = SDL.GetDisplays(out _);
+            return displays;
         }
         
         // helper function to get all visible windows
@@ -178,10 +185,10 @@ namespace Vellum
             List<IntPtr> visibleWindows = new List<IntPtr>();
             
             // getting primary monitor for now, support for other monitors later
-            POINT primaryPoint = new POINT { X = 0, Y = 0 };
+            Point primaryPoint = new Point { X = 0, Y = 0 };
             IntPtr hPrimaryMonitor = MonitorFromPoint(primaryPoint, 2);
             
-            EnumWindows(new EnumWindowsProc((hWnd, lParam) =>
+            EnumWindows((hWnd, _) =>
             {
                 if (!IsWindowVisible(hWnd)) return true;  // skip invisible windows
                 if (GetWindowTitle(hWnd).Contains("MainWindowView", StringComparison.OrdinalIgnoreCase)) return true; // skip main window
@@ -198,7 +205,7 @@ namespace Vellum
                 IntPtr hWindowMonitor = MonitorFromWindow(hWnd, 2);
                 if (hWindowMonitor != hPrimaryMonitor) return true;
 
-                if (GetWindowRect(hWnd, out RECT rect))
+                if (GetWindowRect(hWnd, out Rect rect))
                 {
                     int width = rect.Right - rect.Left;
                     int height = rect.Bottom - rect.Top;
@@ -214,13 +221,12 @@ namespace Vellum
                 if (owner != IntPtr.Zero && IsWindowVisible(owner)) return true;
                 
                 // skips windows that are cloaked (windows flagged as visible even though they are invisible)
-                int cloaked = 0;
-                int hr = DwmGetWindowAttribute(hWnd, DwmwaIsCloaked, out cloaked, sizeof(int));
+                int hr = DwmGetWindowAttribute(hWnd, DwmwaIsCloaked, out var cloaked, sizeof(int));
                 if (hr == 0 && cloaked != 0) return true;
                 
                 visibleWindows.Add(hWnd);
                 return true; 
-            }), IntPtr.Zero);
+            }, IntPtr.Zero);
             
             return visibleWindows;
         }
@@ -253,14 +259,14 @@ namespace Vellum
 
         [LibraryImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
-        private static partial bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+        private static partial void EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
         
         [LibraryImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
         private static partial bool IsWindowVisible(IntPtr hWnd);
         
         [LibraryImport("user32.dll", EntryPoint = "GetWindowTextW", StringMarshalling = StringMarshalling.Utf16)]
-        private static partial int GetWindowText(IntPtr hWnd, [Out] char[] lpString, int nMaxCount);
+        private static partial void GetWindowText(IntPtr hWnd, char[] lpString, int nMaxCount);
 
         [LibraryImport("user32.dll", EntryPoint = "GetWindowTextLengthW")]
         private static partial int GetWindowTextLength(IntPtr hWnd);
@@ -272,19 +278,19 @@ namespace Vellum
         private static partial int DwmGetWindowAttribute(IntPtr hwnd, uint dwAttribute, out int pvAttribute, int cbAttribute);
         
         [StructLayout(LayoutKind.Sequential)]
-        private struct POINT { public int X; public int Y; }
+        private struct Point { public int X; public int Y; }
 
         [StructLayout(LayoutKind.Sequential)]
-        private struct RECT { public int Left; public int Top; public int Right; public int Bottom; }
+        private struct Rect { public int Left; public int Top; public int Right; public int Bottom; }
         
         [LibraryImport("user32.dll")]
-        private static partial IntPtr MonitorFromPoint(POINT pt, uint dwFlags);
+        private static partial IntPtr MonitorFromPoint(Point pt, uint dwFlags);
 
         [LibraryImport("user32.dll")]
         private static partial IntPtr MonitorFromWindow(IntPtr hwnd, uint dwFlags);
         
         [LibraryImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
-        private static partial bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+        private static partial bool GetWindowRect(IntPtr hWnd, out Rect lpRect);
     }
 }
