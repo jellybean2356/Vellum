@@ -41,6 +41,11 @@ namespace Vellum
             }
             
             MakeLayered(window);
+            uint[]? displays = GetScreenDisplayIds();
+            if (displays != null)
+                foreach (var display in displays)
+                    Console.WriteLine($"Detected display id: {display}");
+
             SDL.FRect[] interactiveParts =
             [
                 new() { X = 50, Y = 50, W = 100, H = 100 },
@@ -99,7 +104,7 @@ namespace Vellum
             
             // set ExStyle to layered and transparent
             var exStyle = GetWindowLongPtr(hwnd, GwlExstyle).ToInt64();
-            _ = SetWindowLongPtr(hwnd, GwlExstyle, new IntPtr(exStyle | WsExLayered | WsExTransparent));
+            _ = SetWindowLongPtr(hwnd, GwlExstyle, new IntPtr(exStyle | WsExLayered | WsExTransparent | WsExToolWindow));
             _clickThrough = true;
         }
 
@@ -145,10 +150,20 @@ namespace Vellum
             
             _ = SetWindowLongPtr(hwnd, GwlExstyle, new IntPtr(exStyle));
         }
+
+        private static uint[]? GetScreenDisplayIds()
+        {
+            unsafe
+            {
+                uint[]? displays = SDL.GetDisplays(out int count);
+                return displays;
+            }
+        }
         
-        private const int GwlExstyle = -20;
+        private const int GwlExstyle = -20; // extended window style
         private const long WsExLayered = 0x00080000; // layered window
         private const long WsExTransparent = 0x00000020; // transparent window
+        private const long WsExToolWindow = 0x00000080; // hides the window icon from toolbar
         
         // importing user32.dll functions
         [LibraryImport("user32.dll", EntryPoint = "GetWindowLongPtrW")]
