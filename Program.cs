@@ -1,6 +1,7 @@
 ﻿using SDL3;
 using System;
 using System.Runtime.InteropServices;
+using System.Collections.Generic;
 
 namespace Vellum
 {
@@ -41,10 +42,19 @@ namespace Vellum
             }
             
             MakeLayered(window);
+            
+            // debug to print all displays
             uint[]? displays = GetScreenDisplayIds();
             if (displays != null)
                 foreach (var display in displays)
                     Console.WriteLine($"Detected display id: {display}");
+            
+            // debug to print all visible windows
+            List<IntPtr> openWindows = GetWindowsHandles();
+            foreach (IntPtr hwnd in openWindows)
+            {
+                Console.WriteLine($"Found HWND: 0x{hwnd.ToString("X")} | Application: {GetWindowTitle(hwnd)}");
+            }
 
             SDL.FRect[] interactiveParts =
             [
@@ -151,6 +161,7 @@ namespace Vellum
             _ = SetWindowLongPtr(hwnd, GwlExstyle, new IntPtr(exStyle));
         }
 
+        // helper function to get screen display ids
         private static uint[]? GetScreenDisplayIds()
         {
             unsafe
@@ -160,7 +171,75 @@ namespace Vellum
             }
         }
         
+        // helper function to get all visible windows
+        private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+        private static List<IntPtr> GetWindowsHandles()
+        {
+            List<IntPtr> visibleWindows = new List<IntPtr>();
+            
+            // getting primary monitor for now, support for other monitors later
+            POINT primaryPoint = new POINT { X = 0, Y = 0 };
+            IntPtr hPrimaryMonitor = MonitorFromPoint(primaryPoint, 2);
+            
+            EnumWindows(new EnumWindowsProc((hWnd, lParam) =>
+            {
+                if (!IsWindowVisible(hWnd)) return true;  // skip invisible windows
+                if (GetWindowTitle(hWnd).Contains("MainWindowView", StringComparison.OrdinalIgnoreCase)) return true; // skip main window
+                
+                // skips windows without title
+                int titleLength = GetWindowTextLength(hWnd);
+                if (titleLength == 0) return true;
+                
+                // skips windows that are excluded from toolbar
+                long exStyle = GetWindowLongPtr(hWnd, GwlExstyle).ToInt64();
+                if ((exStyle & WsExToolWindow) != 0) return true;
+                
+                // checking if window is on primary monitor
+                IntPtr hWindowMonitor = MonitorFromWindow(hWnd, 2);
+                if (hWindowMonitor != hPrimaryMonitor) return true;
+
+                if (GetWindowRect(hWnd, out RECT rect))
+                {
+                    int width = rect.Right - rect.Left;
+                    int height = rect.Bottom - rect.Top;
+                    if (width <= 0 || height <= 0) return true;
+                }
+                else
+                {
+                    return true;
+                }
+                
+                // skips windows that are childs of other windows
+                IntPtr owner = GetWindow(hWnd, GwOwner);
+                if (owner != IntPtr.Zero && IsWindowVisible(owner)) return true;
+                
+                // skips windows that are cloaked (windows flagged as visible even though they are invisible)
+                int cloaked = 0;
+                int hr = DwmGetWindowAttribute(hWnd, DwmwaIsCloaked, out cloaked, sizeof(int));
+                if (hr == 0 && cloaked != 0) return true;
+                
+                visibleWindows.Add(hWnd);
+                return true; 
+            }), IntPtr.Zero);
+            
+            return visibleWindows;
+        }
+
+        public static string GetWindowTitle(IntPtr hWnd)
+        {
+            int length = GetWindowTextLength(hWnd);
+            if (length > 0)
+            {
+                char[] buffer = new char[length + 1];
+                GetWindowText(hWnd, buffer, buffer.Length);
+                return new string(buffer);
+            }
+            return string.Empty;
+        }
+        
         private const int GwlExstyle = -20; // extended window style
+        private const uint GwOwner = 3;
+        private const uint DwmwaIsCloaked = 14;
         private const long WsExLayered = 0x00080000; // layered window
         private const long WsExTransparent = 0x00000020; // transparent window
         private const long WsExToolWindow = 0x00000080; // hides the window icon from toolbar
@@ -171,5 +250,41 @@ namespace Vellum
             
         [LibraryImport("user32.dll", EntryPoint = "SetWindowLongPtrW")]
         private static partial IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+
+        [LibraryImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static partial bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+        
+        [LibraryImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static partial bool IsWindowVisible(IntPtr hWnd);
+        
+        [LibraryImport("user32.dll", EntryPoint = "GetWindowTextW", StringMarshalling = StringMarshalling.Utf16)]
+        private static partial int GetWindowText(IntPtr hWnd, [Out] char[] lpString, int nMaxCount);
+
+        [LibraryImport("user32.dll", EntryPoint = "GetWindowTextLengthW")]
+        private static partial int GetWindowTextLength(IntPtr hWnd);
+
+        [LibraryImport("user32.dll")]
+        private static partial IntPtr GetWindow(IntPtr hWnd, uint uCmd);
+        
+        [LibraryImport("dwmapi.dll")]
+        private static partial int DwmGetWindowAttribute(IntPtr hwnd, uint dwAttribute, out int pvAttribute, int cbAttribute);
+        
+        [StructLayout(LayoutKind.Sequential)]
+        private struct POINT { public int X; public int Y; }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct RECT { public int Left; public int Top; public int Right; public int Bottom; }
+        
+        [LibraryImport("user32.dll")]
+        private static partial IntPtr MonitorFromPoint(POINT pt, uint dwFlags);
+
+        [LibraryImport("user32.dll")]
+        private static partial IntPtr MonitorFromWindow(IntPtr hwnd, uint dwFlags);
+        
+        [LibraryImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static partial bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
     }
 }
