@@ -1,4 +1,5 @@
 ﻿using SDL3;
+using System;
 using System.Runtime.InteropServices;
 
 namespace Vellum
@@ -8,10 +9,10 @@ namespace Vellum
         [STAThread]
         private static void Main()
         {
-            var windowFlags = SDL.WindowFlags.Transparent |
-                              SDL.WindowFlags.Borderless |
-                              SDL.WindowFlags.Fullscreen |
-                              SDL.WindowFlags.AlwaysOnTop;
+            const SDL.WindowFlags windowFlags = SDL.WindowFlags.Transparent |
+                                                SDL.WindowFlags.Borderless |
+                                                SDL.WindowFlags.Fullscreen |
+                                                SDL.WindowFlags.AlwaysOnTop;
             
             // initialize SDL
             if (!SDL.Init(SDL.InitFlags.Video))
@@ -38,7 +39,13 @@ namespace Vellum
                 return;
             }
             
-            MakeClickTrough(window);
+            MakeLayered(window);
+            SDL.FRect[] interactiveParts =
+            [
+                new() { X = 50, Y = 50, W = 100, H = 100 },
+                new() { X = 1820, Y = 50, W = 100, H = 100 },
+                new() { X = 50, Y = 980, W = 100, H = 100 }
+            ];
             
             // run the window loop
             var loop = true;
@@ -51,6 +58,8 @@ namespace Vellum
                         loop = false;
                     }
                 }
+
+                UpdateClickTrough(window, interactiveParts);
                 
                 SDL.SetRenderDrawBlendMode(renderer, SDL.BlendMode.None);
                 SDL.SetRenderDrawColor(renderer, 0, 0, 0, 0);
@@ -58,14 +67,10 @@ namespace Vellum
                 
                 SDL.SetRenderDrawBlendMode(renderer, SDL.BlendMode.Blend);
                 SDL.SetRenderDrawColor(renderer, 255, 0, 0, 255);
-                SDL.FRect rect = new SDL.FRect
+                foreach (var interactivePart in interactiveParts)
                 {
-                    X = 50,
-                    Y = 50,
-                    W = 100,
-                    H = 10
-                };
-                SDL.RenderFillRect(renderer, rect);
+                    SDL.RenderFillRect(renderer, interactivePart);
+                }
                 
                 SDL.RenderPresent(renderer);
             }
@@ -75,25 +80,76 @@ namespace Vellum
             SDL.Quit();
         }
         
-        private static void MakeClickTrough(IntPtr window)
+        // helper method to obrain hwnd
+        private static IntPtr GetHwnd(IntPtr window)
         {
             var props = SDL.GetWindowProperties(window);
-            var hwnd = SDL.GetPointerProperty(props, SDL.Props.WindowWin32HWNDPointer, IntPtr.Zero);
+            return SDL.GetPointerProperty(props, SDL.Props.WindowWin32HWNDPointer, IntPtr.Zero);
+        }
+        
+        // make window layered and transpparent at start, fully clickable trough at start
+        private static bool _clickThrough;
+        private static void MakeLayered(IntPtr window)
+        {
+            // get hwnd
+            var hwnd = GetHwnd(window);
             if (hwnd == IntPtr.Zero)
-            {
                 return;
+            
+            // set ExStyle to layered and transparent
+            var exStyle = GetWindowLongPtr(hwnd, GwlExstyle).ToInt64();
+            _ = SetWindowLongPtr(hwnd, GwlExstyle, new IntPtr(exStyle | WsExLayered | WsExTransparent));
+            _clickThrough = true;
+        }
+
+        // partial click-through handler (NOT REQUIRED)
+        private static void UpdateClickTrough(IntPtr window, SDL.FRect[] interactiveParts)
+        {
+            // get hwnd
+            var hwnd = GetHwnd(window);
+            if (hwnd == IntPtr.Zero)
+                return;
+            
+            _ = SDL.GetGlobalMouseState(out var gx, out var gy); // global cursor position
+            SDL.GetWindowPosition(window, out var wx, out var wy); // window position
+            
+            // getting window-local coordinates
+            var localX = gx - wx;
+            var localY = gy - wy;
+            
+            // check if cursor is over interactive areas
+            var overInteractive = false;
+            foreach (var interactivePart in interactiveParts)
+            {
+                if (localX >= interactivePart.X && localX <= interactivePart.X + interactivePart.W &&
+                    localY >= interactivePart.Y && localY <= interactivePart.Y + interactivePart.H)
+                {
+                    overInteractive = true;
+                    break;
+                }
             }
             
+            var wantClickTrough = !overInteractive;
+            if (wantClickTrough == _clickThrough)
+                return;
+
+            _clickThrough = wantClickTrough;
+            
+            // toggles transperent exstyle based on click-through state
             var exStyle = GetWindowLongPtr(hwnd, GwlExstyle).ToInt64();
-            var newStyle = new IntPtr(exStyle | WsExLayered | WsExTransparent);
-            _ = SetWindowLongPtr(hwnd, GwlExstyle, newStyle);
-            SetWindowLongPtr(hwnd, GwlExstyle, newStyle);
+            if (wantClickTrough)
+                exStyle |= WsExTransparent;
+            else
+                exStyle &= ~WsExTransparent;
+            
+            _ = SetWindowLongPtr(hwnd, GwlExstyle, new IntPtr(exStyle));
         }
         
         private const int GwlExstyle = -20;
-        private const long WsExLayered = 0x00080000;
-        private const long WsExTransparent = 0x00000020;
+        private const long WsExLayered = 0x00080000; // layered window
+        private const long WsExTransparent = 0x00000020; // transparent window
         
+        // importing user32.dll functions
         [LibraryImport("user32.dll", EntryPoint = "GetWindowLongPtrW")]
         private static partial IntPtr GetWindowLongPtr(IntPtr hWnd, int nIndex);
             
