@@ -12,7 +12,8 @@ namespace Vellum
             const SDL.WindowFlags windowFlags = SDL.WindowFlags.Transparent |
                                                 SDL.WindowFlags.Borderless |
                                                 SDL.WindowFlags.Fullscreen |
-                                                SDL.WindowFlags.AlwaysOnTop;
+                                                SDL.WindowFlags.AlwaysOnTop |
+                                                SDL.WindowFlags.NotFocusable;
             
             // initialize SDL
             if (!SDL.Init(SDL.InitFlags.Video))
