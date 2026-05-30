@@ -50,13 +50,16 @@ namespace Vellum
                 foreach (var display in displays)
                     Console.WriteLine($"Detected display id: {display}");
             
-            // initial windows log
+            // initial lists for windows FRects
             List<IntPtr> openWindows = GetWindowsHandles();
             List<IntPtr> openWindowsOld = GetWindowsHandles();
-            foreach (IntPtr hwnd in openWindows)
+            List<IntPtr> windowRects = new List<IntPtr>();
+            
+            foreach (var hwnd in openWindows)
             {
                 Console.WriteLine($"found HWND: 0x{hwnd.ToString("X")} | Application: {GetWindowTitle(hwnd)}");
             }
+
 
             SDL.FRect[] interactiveParts =
             [
@@ -77,13 +80,19 @@ namespace Vellum
                     }
                 }
                 
+                // debug for when window enters primary screen and add HWNDS to windowRects
                 openWindows = GetWindowsHandles();
                 var difference = openWindows.Except(openWindowsOld).ToList();
                 foreach (var hwnd in difference)
                 {
                     Console.WriteLine($"found HWND: 0x{hwnd.ToString("X")} | Application: {GetWindowTitle(hwnd)}");
+                    if (!windowRects.Contains(hwnd))
+                    {
+                        windowRects.Add(hwnd); 
+                    }
                 }
                 openWindowsOld = openWindows;
+                windowRects.RemoveAll(hwnd => !openWindows.Contains(hwnd));
                 
                 UpdateClickTrough(window, interactiveParts);
                 
@@ -96,6 +105,13 @@ namespace Vellum
                 foreach (var interactivePart in interactiveParts)
                 {
                     SDL.RenderFillRect(renderer, interactivePart);
+                }
+
+                // rendering windowRects (debug)
+                foreach (IntPtr hwnd in windowRects)
+                {
+                    SDL.FRect drawBox = GetWindowFRect(hwnd, window);
+                    SDL.RenderRect(renderer, drawBox);
                 }
                 
                 SDL.RenderPresent(renderer);
@@ -221,7 +237,7 @@ namespace Vellum
                 if (owner != IntPtr.Zero && IsWindowVisible(owner)) return true;
                 
                 // skips windows that are cloaked (windows flagged as visible even though they are invisible)
-                int hr = DwmGetWindowAttribute(hWnd, DwmwaIsCloaked, out var cloaked, sizeof(int));
+                int hr = DwmGetWindowAttribute(hWnd, DwmwaIsCloaked, out int cloaked, sizeof(int));
                 if (hr == 0 && cloaked != 0) return true;
                 
                 visibleWindows.Add(hWnd);
@@ -231,6 +247,7 @@ namespace Vellum
             return visibleWindows;
         }
 
+        // helper to obrain window title, used for deubug
         public static string GetWindowTitle(IntPtr hWnd)
         {
             int length = GetWindowTextLength(hWnd);
@@ -242,7 +259,40 @@ namespace Vellum
             }
             return string.Empty;
         }
+
+        // helper to get window bounds
+        public static Rect GetVisualWindowBounds(IntPtr hWnd)
+        {
+            int hr = DwmGetWindowAttribute(hWnd, 9, out Rect rect, Marshal.SizeOf<Rect>());
+            if (hr != 0)
+            {
+                GetWindowRect(hWnd, out rect);
+            }
+            return rect;
+        }
+
+        // helper method to translate window rect to FRect
+        public static SDL.FRect GetWindowFRect(IntPtr targetHwnd, IntPtr overlayHwnd)
+        {
+            Rect targetRect = GetVisualWindowBounds(targetHwnd);
+            Rect ovverlayRect = GetVisualWindowBounds(overlayHwnd);
+            
+            float localX = targetRect.Left - ovverlayRect.Left;
+            float localY = targetRect.Top - ovverlayRect.Top;
+            
+            float width = targetRect.Right - targetRect.Left;
+            float height = targetRect.Bottom - targetRect.Top;
+
+            return new SDL.FRect
+            {
+                X = localX,
+                Y = localY,
+                W = width,
+                H = height
+            };
+        }
         
+        // constants
         private const int GwlExstyle = -20; // extended window style
         private const uint GwOwner = 3;
         private const uint DwmwaIsCloaked = 14;
@@ -275,13 +325,16 @@ namespace Vellum
         private static partial IntPtr GetWindow(IntPtr hWnd, uint uCmd);
         
         [LibraryImport("dwmapi.dll")]
+        private static partial int DwmGetWindowAttribute(IntPtr hwnd, uint dwAttribute, out Rect pvAttribute, int cbAttribute);
+        
+        [LibraryImport("dwmapi.dll")]
         private static partial int DwmGetWindowAttribute(IntPtr hwnd, uint dwAttribute, out int pvAttribute, int cbAttribute);
         
         [StructLayout(LayoutKind.Sequential)]
         private struct Point { public int X; public int Y; }
 
         [StructLayout(LayoutKind.Sequential)]
-        private struct Rect { public int Left; public int Top; public int Right; public int Bottom; }
+        public struct Rect { public int Left; public int Top; public int Right; public int Bottom; }
         
         [LibraryImport("user32.dll")]
         private static partial IntPtr MonitorFromPoint(Point pt, uint dwFlags);
