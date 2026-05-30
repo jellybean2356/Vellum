@@ -54,6 +54,8 @@ namespace Vellum
             List<IntPtr> openWindows = GetWindowsHandles();
             List<IntPtr> openWindowsOld = GetWindowsHandles();
             List<IntPtr> windowRects = new List<IntPtr>();
+            windowRects = openWindows.ToList();
+            UInt64 lastTime = SDL.GetTicks();
             
             foreach (var hwnd in openWindows)
             {
@@ -61,11 +63,11 @@ namespace Vellum
             }
 
 
-            SDL.FRect[] interactiveParts =
+            PhysicsObject[] interactiveRects = 
             [
-                new() { X = 50, Y = 50, W = 100, H = 100 },
-                new() { X = 1820, Y = 50, W = 100, H = 100 },
-                new() { X = 50, Y = 980, W = 100, H = 100 }
+                new() { X = 50, Y = 50, Width = 100, Height = 100 },
+                new() { X = 1820, Y = 50, Width = 100, Height = 100 },
+                new() { X = 50, Y = 980, Width = 100, Height = 100 }
             ];
             
             // run the window loop
@@ -79,6 +81,24 @@ namespace Vellum
                         loop = false;
                     }
                 }
+                
+                // update physics
+                var currentTime = SDL.GetTicks();
+                float deltaTime = (currentTime - lastTime) / 1000.0f;
+                lastTime = currentTime;
+                
+                foreach (var obj in interactiveRects)
+                {
+                    UpdatePhysics(obj, deltaTime, windowRects, window);
+                }
+                
+                SDL.FRect[] interactiveParts = interactiveRects.Select(obj => new SDL.FRect 
+                { 
+                    X = obj.X, 
+                    Y = obj.Y, 
+                    W = obj.Width, 
+                    H = obj.Height 
+                }).ToArray();
                 
                 // debug for when window enters primary screen and add HWNDS to windowRects
                 openWindows = GetWindowsHandles();
@@ -95,6 +115,7 @@ namespace Vellum
                 windowRects.RemoveAll(hwnd => !openWindows.Contains(hwnd));
                 
                 UpdateClickTrough(window, interactiveParts);
+                
                 
                 SDL.SetRenderDrawBlendMode(renderer, SDL.BlendMode.None);
                 SDL.SetRenderDrawColor(renderer, 0, 0, 0, 0);
@@ -291,6 +312,40 @@ namespace Vellum
                 H = height
             };
         }
+
+        // simple physics engine
+        public static void UpdatePhysics(PhysicsObject obj, float deltaTime, List<IntPtr> windowRects, IntPtr overlayHwnd)
+        {
+            obj.VelocityY += Gravity * deltaTime;
+            obj.X += obj.VelocityX * deltaTime;
+            obj.Y += obj.VelocityY * deltaTime;
+
+            foreach (IntPtr hwnd in windowRects)
+            {
+                SDL.FRect winRect = GetWindowFRect(hwnd, overlayHwnd);
+                if (winRect.W <= 0 || winRect.H <= 0) continue;
+                bool isOverlaping = obj.X < winRect.X + winRect.W && 
+                                    obj.X + obj.Width > winRect.X &&
+                                    obj.Y < winRect.Y + winRect.H &&
+                                    obj.Y + obj.Height > winRect.Y;
+                if (isOverlaping)
+                {
+                    float previousBottom = obj.Y - (obj.VelocityY * deltaTime) + obj.Height;
+                    if (previousBottom < winRect.Y + 15f && obj.VelocityY > 0)
+                    {
+                        obj.Y = winRect.Y - obj.Height;
+                        obj.VelocityY = 0;
+                        return;
+                    }
+                }
+            }
+
+            if (obj.Y + obj.Height >= GroundLevel)
+            {
+                obj.Y = GroundLevel - obj.Height;
+                obj.VelocityY = 0;
+            }
+        }
         
         // constants
         private const int GwlExstyle = -20; // extended window style
@@ -299,6 +354,9 @@ namespace Vellum
         private const long WsExLayered = 0x00080000; // layered window
         private const long WsExTransparent = 0x00000020; // transparent window
         private const long WsExToolWindow = 0x00000080; // hides the window icon from toolbar
+
+        private const float GroundLevel = 1391f;
+        private const float Gravity = 1000f;
         
         // importing user32.dll functions
         [LibraryImport("user32.dll", EntryPoint = "GetWindowLongPtrW")]
@@ -345,5 +403,17 @@ namespace Vellum
         [LibraryImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
         private static partial bool GetWindowRect(IntPtr hWnd, out Rect lpRect);
+    }
+    
+    public class PhysicsObject
+    {
+        public float X;
+        public float Y;
+        
+        public float VelocityX;
+        public float VelocityY;
+        
+        public float Width;
+        public float Height;
     }
 }
