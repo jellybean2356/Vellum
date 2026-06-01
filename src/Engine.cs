@@ -15,13 +15,30 @@ public class Engine : IDisposable
     public bool Initialize()
     {
         if (_isInitialized) return true;
-        if (!Window.Initialize()) return false; // will be combined later, for now it's a little messy
+        if (!SDL.Init(SDL.InitFlags.Video))
+        {
+            SDL.LogError(SDL.LogCategory.System, $"SDL could not initialize! SDL_Error: {SDL.GetError()}");
+            return false;
+        }
+        SDL.SetHint(SDL.Hints.RenderDriver, "software");
         
-        var (window, renderer) = Window.CreateOverlay();
-        _window = window;
-        _renderer = renderer;
+        // create window
+        _window = SDL.CreateWindow("Vellum", 0, 0, Window.DefaultOverlayFlags);
+        if (_window == IntPtr.Zero)
+        {
+            SDL.LogError(SDL.LogCategory.Application, $"SDL could not create window! SDL_Error: {SDL.GetError()}");
+        }
         
-        if (_window == IntPtr.Zero || _renderer == IntPtr.Zero) return false;
+        Window.MakeLayered(_window);
+
+        // create renderer
+        _renderer = SDL.CreateRenderer(_window, "software");
+        if (_renderer == IntPtr.Zero)
+        {
+            SDL.LogError(SDL.LogCategory.Application, $"SDL could not create renderer! SDL_Error: {SDL.GetError()}");
+        }
+        
+        Window.ConfigureOverlay(_window, _renderer);
         _isInitialized = true;
         _isRunning = true;
         return true;
@@ -35,7 +52,6 @@ public class Engine : IDisposable
         while (SDL.PollEvent(out var e))
         {
             if ((SDL.EventType)e.Type != SDL.EventType.Quit) continue;
-            
             _isRunning = false;
             return false;
         }
@@ -49,7 +65,7 @@ public class Engine : IDisposable
         return true;
     }
 
-    // allows the user to set what objects should register inputs (makes certain objects not click trough)
+    // allows the user to set what objects should register inputs (makes certain objects not click through)
     public void SetInteractiveRegions(IEnumerable<Rect> regions)
     {
         _clickBounds = regions.Select(r => r.ToSdl()).ToArray();

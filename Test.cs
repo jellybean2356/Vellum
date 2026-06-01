@@ -27,7 +27,7 @@ public class Test
         {
             foreach (var part in clickableParts)
             {
-                engine.DrawFillRect(part, new Color(255, 0, 0, 255));
+                engine.DrawFillRect(part, new Color(255, 0, 0));
             }
             
             Window.DrawDebugWindows();

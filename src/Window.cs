@@ -14,7 +14,6 @@ public class Window
                                                        SDL.WindowFlags.NotFocusable;
 
     // private variables
-    private static bool _isInitialized;
     private static bool _clickThrough;
     
     private static IntPtr _activeWindow;
@@ -191,46 +190,17 @@ public class Window
         };
     }
 
-    // make the actual invisible overlay
-    public static (IntPtr Window, IntPtr Renderer) CreateOverlay()
+    // configure the window to actually become overlay
+    internal static void ConfigureOverlay(IntPtr window, IntPtr renderer)
     {
-        // create window
-        _activeWindow = SDL.CreateWindow("Vellum", 0, 0, DefaultOverlayFlags);
-        if (_activeWindow == IntPtr.Zero)
-        {
-            SDL.LogError(SDL.LogCategory.Application, $"SDL could not create window! SDL_Error: {SDL.GetError()}");
-        }
+        _activeWindow = window;
+        _activeRenderer = renderer;
         
-        MakeLayered(_activeWindow);
-
-        // create renderer
-        _activeRenderer = SDL.CreateRenderer(_activeWindow, "software");
-        if (_activeRenderer == IntPtr.Zero)
-        {
-            SDL.LogError(SDL.LogCategory.Application, $"SDL could not create renderer! SDL_Error: {SDL.GetError()}");
-        }
-
-        return (_activeWindow, _activeRenderer);
-    }
-
-    // initialize SDL
-    public static bool Initialize()
-    {
-        if (_isInitialized) return true;
-        if (!SDL.Init(SDL.InitFlags.Video))
-        {
-            SDL.LogError(SDL.LogCategory.System, $"SDL could not initialize! SDL_Error: {SDL.GetError()}");
-            return false;
-        }
+        MakeLayered(_activeWindow); // click-through
         
-        SDL.SetHint(SDL.Hints.RenderDriver, "software");
-        
-        _openWindows = GetWindowsHandles();
+        _openWindows = Window.GetWindowsHandles();
         _openWindowsOld = GetWindowsHandles();
         _windowRects.AddRange(_openWindows);
-        
-        _isInitialized = true;
-        return true;
     }
     
     // draw debug squares around windows + print when window enters overlay
@@ -260,7 +230,10 @@ public class Window
     // clear variables to prevent memory bugs
     public static void ClearActiveHandles()
     {
-        if (_activeWindow != IntPtr.Zero) SDL.DestroyWindow(_activeWindow);
-        if (_activeRenderer != IntPtr.Zero) SDL.DestroyRenderer(_activeRenderer);
+        _activeWindow = IntPtr.Zero;
+        _activeRenderer = IntPtr.Zero;
+        _windowRects.Clear();
+        _openWindows.Clear();
+        _openWindowsOld.Clear();
     }
 }
