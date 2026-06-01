@@ -60,15 +60,15 @@ public class Test
             Color boxColor;
             if (isDragging)
             {
-                boxColor = new Color(0, 255, 0, 255); // green when moving
+                boxColor = Color.Green; // green when moving
             }
             else if (Environment.TickCount64 < blinkEndTime)
             {
-                boxColor = new Color(255, 130, 0, 255); // orange flash when clicked
+                boxColor = Color.Orange; // orange flash when clicked
             }
             else
             {
-                boxColor = new Color(255, 0, 0, 255); // red default
+                boxColor = Color.Red; // red default
             }
 
             engine.DrawFillRect(interactiveBox, boxColor);
