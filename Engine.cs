@@ -75,6 +75,9 @@ public class Engine : IDisposable
     {
         if (_renderer != IntPtr.Zero) SDL.DestroyRenderer(_renderer);
         if (_window != IntPtr.Zero) SDL.DestroyWindow(_window);
+        
+        Window.ClearActiveHandles();
+        
         SDL.Quit();
         GC.SuppressFinalize(this);
     }

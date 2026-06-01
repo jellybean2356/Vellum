@@ -161,7 +161,7 @@ public class Window
     // helper to get window bounds
     public static Win32Rect GetVisualWindowBounds(IntPtr hWnd)
     {
-        var hr = DwmGetWindowAttribute(hWnd, 9, out Win32Rect rect, Marshal.SizeOf<Win32Rect>());
+        var hr = DwmGetWindowAttribute(hWnd, DwmwaExtendedFrameBounds, out Win32Rect rect, Marshal.SizeOf<Win32Rect>());
         if (hr != 0)
         {
             GetWindowRect(hWnd, out rect);
@@ -255,5 +255,12 @@ public class Window
             var drawBox = Window.GetWindowFRect(hwnd, _activeWindow);
             SDL.RenderRect(_activeRenderer, drawBox);
         }
+    }
+
+    // clear variables to prevent memory bugs
+    public static void ClearActiveHandles()
+    {
+        if (_activeWindow != IntPtr.Zero) SDL.DestroyWindow(_activeWindow);
+        if (_activeRenderer != IntPtr.Zero) SDL.DestroyRenderer(_activeRenderer);
     }
 }

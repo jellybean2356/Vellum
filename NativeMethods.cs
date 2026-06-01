@@ -12,6 +12,8 @@ public partial class NativeMethods
         public const long WsExTransparent = 0x00000020; // transparent window
         public const long WsExToolWindow = 0x00000080; // hides the window icon from toolbar
         
+        public const uint DwmwaExtendedFrameBounds = 9;
+        
         public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
         
         // importing user32.dll functions
