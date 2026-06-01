@@ -44,47 +44,6 @@ public class Window
         _clickThrough = true;
     }
 
-    // partial click-through handler (for overlays)
-    public static void UpdateInput(IntPtr window, SDL.FRect[] interactiveParts)
-    {
-        // get hwnd
-        var hwnd = GetHwnd(window);
-        if (hwnd == IntPtr.Zero)
-            return;
-
-        _ = SDL.GetGlobalMouseState(out var gx, out var gy); // global cursor position
-        SDL.GetWindowPosition(window, out var wx, out var wy); // window position
-
-        // getting window-local coordinates
-        var localX = gx - wx;
-        var localY = gy - wy;
-
-        // check if cursor is over interactive areas
-        var overInteractive = false;
-        foreach (var interactivePart in interactiveParts)
-        {
-            if (!(localX >= interactivePart.X) || !(localX <= interactivePart.X + interactivePart.W) ||
-                !(localY >= interactivePart.Y) || !(localY <= interactivePart.Y + interactivePart.H)) continue;
-            overInteractive = true;
-            break;
-        }
-
-        var wantClickTrough = !overInteractive;
-        if (wantClickTrough == _clickThrough)
-            return;
-
-        _clickThrough = wantClickTrough;
-
-        // toggles transparent exstyle based on click-through state
-        var exStyle = GetWindowLongPtr(hwnd, GwlExstyle).ToInt64();
-        if (wantClickTrough)
-            exStyle |= WsExTransparent;
-        else
-            exStyle &= ~WsExTransparent;
-
-        _ = SetWindowLongPtr(hwnd, GwlExstyle, new IntPtr(exStyle));
-    }
-
     // helper function to get screen display ids
     public static uint[]? GetScreenDisplayIds()
     {
@@ -194,7 +153,7 @@ public class Window
     internal static void ConfigureOverlay(IntPtr window, IntPtr renderer)
     {
         _activeWindow = window;
-        _activeRenderer = renderer;
+        _activeRenderer = renderer; // cache renderer and window for later use example: DrawDebugWindows()
         
         MakeLayered(_activeWindow); // click-through
         
@@ -220,11 +179,29 @@ public class Window
         _windowRects.RemoveAll(hwnd => !_openWindows.Contains(hwnd));
         
         SDL.SetRenderDrawColor(_activeRenderer, 255, 0, 0, 255);
-        foreach (IntPtr hwnd in _windowRects)
+        foreach (var hwnd in _windowRects)
         {
             var drawBox = Window.GetWindowFRect(hwnd, _activeWindow);
             SDL.RenderRect(_activeRenderer, drawBox);
         }
+    }
+
+    internal static void SetClickThrough(IntPtr window, bool enabled)
+    {
+        if (enabled == _clickThrough) return;
+        
+        var hwnd = GetHwnd(window);
+        if (hwnd == IntPtr.Zero) return;
+        
+        var exStyle = GetWindowLongPtr(hwnd, GwlExstyle).ToInt64();
+        if (enabled)
+            exStyle |= WsExTransparent;
+        else
+            exStyle &= ~WsExTransparent;
+        
+        _ = SetWindowLongPtr(hwnd, GwlExstyle, new IntPtr(exStyle));
+        
+        _clickThrough = enabled;
     }
 
     // clear variables to prevent memory bugs

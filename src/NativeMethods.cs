@@ -61,4 +61,7 @@ public partial class NativeMethods
         [LibraryImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static partial bool GetWindowRect(IntPtr hWnd, out Win32Rect lpRect);
+        
+        [LibraryImport("user32.dll")]
+        public static partial short GetAsyncKeyState(int vKey);
 }

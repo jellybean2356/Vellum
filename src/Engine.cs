@@ -28,8 +28,6 @@ public class Engine : IDisposable
         {
             SDL.LogError(SDL.LogCategory.Application, $"SDL could not create window! SDL_Error: {SDL.GetError()}");
         }
-        
-        Window.MakeLayered(_window);
 
         // create renderer
         _renderer = SDL.CreateRenderer(_window, "software");
@@ -51,12 +49,14 @@ public class Engine : IDisposable
 
         while (SDL.PollEvent(out var e))
         {
-            if ((SDL.EventType)e.Type != SDL.EventType.Quit) continue;
-            _isRunning = false;
-            return false;
+            if ((SDL.EventType)e.Type == SDL.EventType.Quit)
+            {
+                _isRunning = false;
+                return false;
+            }
         }
         
-        Window.UpdateInput(_window, _clickBounds);
+        Input.UpdateStates(_window, _clickBounds);
         
         SDL.SetRenderDrawBlendMode(_renderer, SDL.BlendMode.None);
         SDL.SetRenderDrawColor(_renderer, 0, 0, 0, 0);

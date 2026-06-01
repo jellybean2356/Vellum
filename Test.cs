@@ -11,27 +11,69 @@ public class Test
         // initialize engine
         using var engine = new Engine();
         if (!engine.Initialize()) return;
-
-        // clickable parts of the overlay
-        List<Rect> clickableParts =
-        [
-            new(50, 50, 100, 100),
-            new(1820, 50, 100, 100),
-            new(50, 980, 100, 100)
-        ];
         
-        engine.SetInteractiveRegions(clickableParts);
+        var interactiveBox = new Rect(100, 100, 150, 150);
+        bool isDragging = false;
+        
+        float offsetX = 0;
+        float offsetY = 0;
+
+        // click configuration
+        long blinkEndTime = 0;
+        const long blinkDurationMs = 50;
 
         // run the window loop
         while (engine.Update())
         {
-            foreach (var part in clickableParts)
+            bool isHovering = Input.MouseX >= interactiveBox.X && Input.MouseX <= interactiveBox.X + interactiveBox.Width &&
+                              Input.MouseY >= interactiveBox.Y && Input.MouseY <= interactiveBox.Y + interactiveBox.Height;
+            
+            // when dragging the box
+            if (isHovering && Input.IsMouseDragging(MouseButton.Left) && !isDragging)
             {
-                engine.DrawFillRect(part, new Color(255, 0, 0));
+                isDragging = true;
+                offsetX = Input.MouseX - interactiveBox.X;
+                offsetY = Input.MouseY - interactiveBox.Y;
             }
             
-            Window.DrawDebugWindows();
+            if (isDragging)
+            {
+                interactiveBox.X = Input.MouseX - offsetX;
+                interactiveBox.Y = Input.MouseY - offsetY;
 
+                if (Input.WasMouseReleased(MouseButton.Left))
+                {
+                    isDragging = false;
+                }
+            }
+
+            // when clicked on the box
+            if (isHovering && Input.WasMouseClicked(MouseButton.Left))
+            {
+                blinkEndTime = Environment.TickCount64 + blinkDurationMs;
+            }
+            
+            List<Rect> interactiveAreas = [ interactiveBox ];
+            engine.SetInteractiveRegions(interactiveAreas);
+            
+            // render the square with different colors based on the state
+            Color boxColor;
+            if (isDragging)
+            {
+                boxColor = new Color(0, 255, 0, 255); // green when moving
+            }
+            else if (Environment.TickCount64 < blinkEndTime)
+            {
+                boxColor = new Color(255, 130, 0, 255); // orange flash when clicked
+            }
+            else
+            {
+                boxColor = new Color(255, 0, 0, 255); // red default
+            }
+
+            engine.DrawFillRect(interactiveBox, boxColor);
+            
+            Window.DrawDebugWindows();
             engine.Present();
         }
     }
