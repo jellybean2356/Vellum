@@ -1,53 +1,38 @@
-﻿using SDL3;
+﻿namespace Vellum;
 
-namespace Vellum;
+/*
+    DEMO TEST FOR VELLUM. This project WON'T work like it does now. I will be working on DLL soon, this is a testing file and will not be included in the final package
+*/
 
 public class Test
 {
     private static void Main()
     {
-        // initialize SDL
-        if(!Window.Initialize()) return;
-        var (window, renderer) = Window.CreateOverlay();
-        
+        // initialize engine
+        using var engine = new Engine();
+        if (!engine.Initialize()) return;
+
         // clickable parts of the overlay
-        SDL.FRect[] interactiveParts =
+        List<Rect> clickableParts =
         [
-            new() { X = 50, Y = 50, W = 100, H = 100 },
-            new() { X = 1820, Y = 50, W = 100, H = 100 },
-            new() { X = 50, Y = 980, W = 100, H = 100 }
+            new(50, 50, 100, 100),
+            new(1820, 50, 100, 100),
+            new(50, 980, 100, 100)
         ];
         
+        engine.SetInteractiveRegions(clickableParts);
+
         // run the window loop
-        var loop = true;
-        while (loop)
+        while (engine.Update())
         {
-            loop = Window.ProcessEvents();
-            if (!loop) break;
-            
-            // clean the background
-            SDL.SetRenderDrawBlendMode(renderer, SDL.BlendMode.None);
-            SDL.SetRenderDrawColor(renderer, 0, 0, 0, 0);
-            SDL.RenderClear(renderer);
-            
-            // draw test squares
-            SDL.SetRenderDrawBlendMode(renderer, SDL.BlendMode.Blend);
-            SDL.SetRenderDrawColor(renderer, 255, 0, 0, 255);
-            
-            foreach (var interactivePart in interactiveParts)
+            foreach (var part in clickableParts)
             {
-                SDL.RenderFillRect(renderer, interactivePart);
+                engine.DrawFillRect(part, new Color(255, 0, 0, 255));
             }
             
-            // update input for clickable parts and draw debug windows
-            Window.UpdateInput(window, interactiveParts);
-            Window.DebugWindows(window, renderer);
-            
-            SDL.RenderPresent(renderer);
+            Window.DrawDebugWindows();
+
+            engine.Present();
         }
-        
-        SDL.DestroyRenderer(renderer);
-        SDL.DestroyWindow(window);
-        SDL.Quit();
     }
 }

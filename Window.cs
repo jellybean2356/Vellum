@@ -6,26 +6,32 @@ namespace Vellum;
 
 public class Window
 {
+    // default flags for invisible overlay window
     public const SDL.WindowFlags DefaultOverlayFlags = SDL.WindowFlags.Transparent |
                                                        SDL.WindowFlags.Borderless |
                                                        SDL.WindowFlags.Fullscreen |
                                                        SDL.WindowFlags.AlwaysOnTop |
                                                        SDL.WindowFlags.NotFocusable;
 
-    private static bool _isInitialized = false;
-    private static bool _clickThrough = false;
+    // private variables
+    private static bool _isInitialized;
+    private static bool _clickThrough;
+    
+    private static IntPtr _activeWindow;
+    private static IntPtr _activeRenderer;
     
     private static List<IntPtr> _openWindows = [];
     private static List<IntPtr> _openWindowsOld = [];
-    private static readonly List<IntPtr> WindowRects = [];
+    private static List<IntPtr> _windowRects = [];
 
-    // helper method to obrain hwnd
+    // helper method to get hwnd
     public static IntPtr GetHwnd(IntPtr window)
     {
         var props = SDL.GetWindowProperties(window);
         return SDL.GetPointerProperty(props, SDL.Props.WindowWin32HWNDPointer, IntPtr.Zero);
     }
 
+    // make window layered and transparent (click-through)
     public static void MakeLayered(IntPtr window)
     {
         // get hwnd
@@ -39,7 +45,7 @@ public class Window
         _clickThrough = true;
     }
 
-    // partial click-through handler (NOT REQUIRED)
+    // partial click-through handler (for overlays)
     public static void UpdateInput(IntPtr window, SDL.FRect[] interactiveParts)
     {
         // get hwnd
@@ -58,12 +64,10 @@ public class Window
         var overInteractive = false;
         foreach (var interactivePart in interactiveParts)
         {
-            if (localX >= interactivePart.X && localX <= interactivePart.X + interactivePart.W &&
-                localY >= interactivePart.Y && localY <= interactivePart.Y + interactivePart.H)
-            {
-                overInteractive = true;
-                break;
-            }
+            if (!(localX >= interactivePart.X) || !(localX <= interactivePart.X + interactivePart.W) ||
+                !(localY >= interactivePart.Y) || !(localY <= interactivePart.Y + interactivePart.H)) continue;
+            overInteractive = true;
+            break;
         }
 
         var wantClickTrough = !overInteractive;
@@ -72,7 +76,7 @@ public class Window
 
         _clickThrough = wantClickTrough;
 
-        // toggles transperent exstyle based on click-through state
+        // toggles transparent exstyle based on click-through state
         var exStyle = GetWindowLongPtr(hwnd, GwlExstyle).ToInt64();
         if (wantClickTrough)
             exStyle |= WsExTransparent;
@@ -89,14 +93,14 @@ public class Window
         return displays;
     }
 
-    // helper function to get all visible windows
+    // helper function to get all windows
     public static List<IntPtr> GetWindowsHandles()
     {
-        List<IntPtr> visibleWindows = new List<IntPtr>();
+        var visibleWindows = new List<IntPtr>();
 
-        // getting primary monitor for now, support for other monitors later
-        Win32Point primaryPoint = new Win32Point { X = 0, Y = 0 };
-        IntPtr hPrimaryMonitor = MonitorFromPoint(primaryPoint, 2);
+        // getting primary monitor (multiple monitors will be added later)
+        var primaryPoint = new Win32Point { X = 0, Y = 0 };
+        var hPrimaryMonitor = MonitorFromPoint(primaryPoint, 2);
 
         EnumWindows((hWnd, _) =>
         {
@@ -105,21 +109,21 @@ public class Window
                 return true; // skip main window
 
             // skips windows without title
-            int titleLength = GetWindowTextLength(hWnd);
+            var titleLength = GetWindowTextLength(hWnd);
             if (titleLength == 0) return true;
 
             // skips windows that are excluded from toolbar
-            long exStyle = GetWindowLongPtr(hWnd, GwlExstyle).ToInt64();
+            var exStyle = GetWindowLongPtr(hWnd, GwlExstyle).ToInt64();
             if ((exStyle & WsExToolWindow) != 0) return true;
 
             // checking if window is on primary monitor
-            IntPtr hWindowMonitor = MonitorFromWindow(hWnd, 2);
+            var hWindowMonitor = MonitorFromWindow(hWnd, 2);
             if (hWindowMonitor != hPrimaryMonitor) return true;
 
-            if (GetWindowRect(hWnd, out Win32Rect rect))
+            if (GetWindowRect(hWnd, out var rect))
             {
-                int width = rect.Right - rect.Left;
-                int height = rect.Bottom - rect.Top;
+                var width = rect.Right - rect.Left;
+                var height = rect.Bottom - rect.Top;
                 if (width <= 0 || height <= 0) return true;
             }
             else
@@ -127,7 +131,7 @@ public class Window
                 return true;
             }
 
-            // skips windows that are childs of other windows
+            // skips windows that are children of other windows
             IntPtr owner = GetWindow(hWnd, GwOwner);
             if (owner != IntPtr.Zero && IsWindowVisible(owner)) return true;
 
@@ -142,24 +146,22 @@ public class Window
         return visibleWindows;
     }
 
-    // helper to obrain window title, used for deubug
+    // helper to get window title, used for debug
     public static string GetWindowTitle(IntPtr hWnd)
     {
-        int length = GetWindowTextLength(hWnd);
-        if (length > 0)
-        {
-            char[] buffer = new char[length + 1];
-            GetWindowText(hWnd, buffer, buffer.Length);
-            return new string(buffer);
-        }
+        var length = GetWindowTextLength(hWnd);
+        if (length <= 0) return string.Empty;
+        
+        var buffer = new char[length + 1];
+        GetWindowText(hWnd, buffer, buffer.Length);
+        return new string(buffer);
 
-        return string.Empty;
     }
 
     // helper to get window bounds
     public static Win32Rect GetVisualWindowBounds(IntPtr hWnd)
     {
-        int hr = DwmGetWindowAttribute(hWnd, 9, out Win32Rect rect, Marshal.SizeOf<Rect>());
+        var hr = DwmGetWindowAttribute(hWnd, 9, out Win32Rect rect, Marshal.SizeOf<Win32Rect>());
         if (hr != 0)
         {
             GetWindowRect(hWnd, out rect);
@@ -171,11 +173,11 @@ public class Window
     // helper method to translate window rect to FRect
     public static SDL.FRect GetWindowFRect(IntPtr targetHwnd, IntPtr overlayHwnd)
     {
-        Win32Rect targetRect = GetVisualWindowBounds(targetHwnd);
-        Win32Rect ovverlayRect = GetVisualWindowBounds(overlayHwnd);
+        var targetRect = GetVisualWindowBounds(targetHwnd);
+        var overlyRect = GetVisualWindowBounds(overlayHwnd);
 
-        float localX = targetRect.Left - ovverlayRect.Left;
-        float localY = targetRect.Top - ovverlayRect.Top;
+        float localX = targetRect.Left - overlyRect.Left;
+        float localY = targetRect.Top - overlyRect.Top;
 
         float width = targetRect.Right - targetRect.Left;
         float height = targetRect.Bottom - targetRect.Top;
@@ -189,27 +191,29 @@ public class Window
         };
     }
 
+    // make the actual invisible overlay
     public static (IntPtr Window, IntPtr Renderer) CreateOverlay()
     {
         // create window
-        var window = SDL.CreateWindow("Vellum", 0, 0, DefaultOverlayFlags);
-        if (window == IntPtr.Zero)
+        _activeWindow = SDL.CreateWindow("Vellum", 0, 0, DefaultOverlayFlags);
+        if (_activeWindow == IntPtr.Zero)
         {
             SDL.LogError(SDL.LogCategory.Application, $"SDL could not create window! SDL_Error: {SDL.GetError()}");
         }
         
-        MakeLayered(window);
+        MakeLayered(_activeWindow);
 
         // create renderer
-        var renderer = SDL.CreateRenderer(window, "software");
-        if (renderer == IntPtr.Zero)
+        _activeRenderer = SDL.CreateRenderer(_activeWindow, "software");
+        if (_activeRenderer == IntPtr.Zero)
         {
             SDL.LogError(SDL.LogCategory.Application, $"SDL could not create renderer! SDL_Error: {SDL.GetError()}");
         }
 
-        return (window, renderer);
+        return (_activeWindow, _activeRenderer);
     }
 
+    // initialize SDL
     public static bool Initialize()
     {
         if (_isInitialized) return true;
@@ -223,44 +227,33 @@ public class Window
         
         _openWindows = GetWindowsHandles();
         _openWindowsOld = GetWindowsHandles();
-        WindowRects.AddRange(_openWindows);
+        _windowRects.AddRange(_openWindows);
         
         _isInitialized = true;
         return true;
     }
     
-    public static bool ProcessEvents()
-    {
-        while (SDL.PollEvent(out var e))
-        {
-            if ((SDL.EventType)e.Type == SDL.EventType.Quit)
-            {
-                return false;
-            }
-        }
-        return true;
-    }
-    
-    public static void DebugWindows(nint window, nint renderer)
+    // draw debug squares around windows + print when window enters overlay
+    public static void DrawDebugWindows()
     {
         _openWindows = Window.GetWindowsHandles();
         var difference = _openWindows.Except(_openWindowsOld).ToList();
         foreach (var hwnd in difference)
         {
             Console.WriteLine($"found HWND: 0x{hwnd.ToString("X")} | Application: {Window.GetWindowTitle(hwnd)}");
-            if (!WindowRects.Contains(hwnd))
+            if (!_windowRects.Contains(hwnd))
             {
-                WindowRects.Add(hwnd); 
+                _windowRects.Add(hwnd); 
             }
         }
         _openWindowsOld = _openWindows;
-        WindowRects.RemoveAll(hwnd => !_openWindows.Contains(hwnd));
+        _windowRects.RemoveAll(hwnd => !_openWindows.Contains(hwnd));
         
-        SDL.SetRenderDrawColor(renderer, 255, 0, 0, 255);
-        foreach (IntPtr hwnd in WindowRects)
+        SDL.SetRenderDrawColor(_activeRenderer, 255, 0, 0, 255);
+        foreach (IntPtr hwnd in _windowRects)
         {
-            SDL.FRect drawBox = Window.GetWindowFRect(hwnd, window);
-            SDL.RenderRect(renderer, drawBox);
+            var drawBox = Window.GetWindowFRect(hwnd, _activeWindow);
+            SDL.RenderRect(_activeRenderer, drawBox);
         }
     }
 }
