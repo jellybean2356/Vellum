@@ -1,67 +1,82 @@
 ﻿using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.Marshalling;
 
 namespace Vellum;
 
-public partial class NativeMethods
+internal partial class NativeMethods
 {
         // constants
-        public const int GwlExstyle = -20; // extended window style
-        public const uint GwOwner = 3;
-        public const uint DwmwaIsCloaked = 14;
-        public const long WsExLayered = 0x00080000; // layered window
-        public const long WsExTransparent = 0x00000020; // transparent window
-        public const long WsExToolWindow = 0x00000080; // hides the window icon from toolbar
+        internal const int GwlExstyle = -20; // extended window style
+        internal const uint GwOwner = 3;
+        internal const uint DwmwaIsCloaked = 14;
+        internal const long WsExLayered = 0x00080000; // layered window
+        internal const long WsExTransparent = 0x00000020; // transparent window
+        internal const long WsExToolWindow = 0x00000080; // hides the window icon from toolbar
+        internal const uint DwmwaExtendedFrameBounds = 9;
         
-        public const uint DwmwaExtendedFrameBounds = 9;
-        
-        public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
-        
+        internal delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
         // importing user32.dll functions
         [LibraryImport("user32.dll", EntryPoint = "GetWindowLongPtrW")]
-        public static partial IntPtr GetWindowLongPtr(IntPtr hWnd, int nIndex);
+        internal static partial IntPtr GetWindowLongPtr(IntPtr hWnd, int nIndex);
             
         [LibraryImport("user32.dll", EntryPoint = "SetWindowLongPtrW")]
-        public static partial IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+        internal static partial IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
 
         [LibraryImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
-        public static partial void EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+        internal static partial void EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
         
         [LibraryImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
-        public static partial bool IsWindowVisible(IntPtr hWnd);
+        internal static partial bool IsWindowVisible(IntPtr hWnd);
         
         [LibraryImport("user32.dll", EntryPoint = "GetWindowTextW", StringMarshalling = StringMarshalling.Utf16)]
-        public static partial void GetWindowText(IntPtr hWnd, char[] lpString, int nMaxCount);
+        internal static partial void GetWindowText(IntPtr hWnd, char[] lpString, int nMaxCount);
 
         [LibraryImport("user32.dll", EntryPoint = "GetWindowTextLengthW")]
-        public static partial int GetWindowTextLength(IntPtr hWnd);
+        internal static partial int GetWindowTextLength(IntPtr hWnd);
 
         [LibraryImport("user32.dll")]
-        public static partial IntPtr GetWindow(IntPtr hWnd, uint uCmd);
+        internal static partial IntPtr GetWindow(IntPtr hWnd, uint uCmd);
         
         [LibraryImport("dwmapi.dll")]
-        public static partial int DwmGetWindowAttribute(IntPtr hwnd, uint dwAttribute, out Win32Rect pvAttribute, int cbAttribute);
-        
+        internal static partial int DwmGetWindowAttribute(IntPtr hwnd, uint dwAttribute, out int pvAttribute, int cbAttribute);
+    
+        // Explicitly use out Win32Rect for window bounds
         [LibraryImport("dwmapi.dll")]
-        public static partial int DwmGetWindowAttribute(IntPtr hwnd, uint dwAttribute, out int pvAttribute, int cbAttribute);
-        
-        [StructLayout(LayoutKind.Sequential)]
-        public struct Win32Point { public int X; public int Y; }
-
-        [StructLayout(LayoutKind.Sequential)]
-        public struct Win32Rect { public int Left; public int Top; public int Right; public int Bottom; }
+        internal static partial int DwmGetWindowAttribute(IntPtr hwnd, uint dwAttribute, out Win32Rect pvAttribute, int cbAttribute);
         
         [LibraryImport("user32.dll")]
-        public static partial IntPtr MonitorFromPoint(Win32Point pt, uint dwFlags);
+        internal static partial IntPtr MonitorFromPoint(Win32Point pt, uint dwFlags);
 
         [LibraryImport("user32.dll")]
-        public static partial IntPtr MonitorFromWindow(IntPtr hwnd, uint dwFlags);
+        internal static partial IntPtr MonitorFromWindow(IntPtr hwnd, uint dwFlags);
         
+        [LibraryImport("user32.dll")]
+        internal static partial short GetAsyncKeyState(int vKey);
+
         [LibraryImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
-        public static partial bool GetWindowRect(IntPtr hWnd, out Win32Rect lpRect);
+        internal static partial bool GetWindowRect(IntPtr hWnd, out Win32Rect lpRect);
         
-        [LibraryImport("user32.dll")]
-        public static partial short GetAsyncKeyState(int vKey);
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct Win32Point { internal int X; internal int Y; }
+        
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct Win32Rect { internal int Left; internal int Top; internal int Right; internal int Bottom; }
+        
+        internal static int DwmGetWindowAttribute(IntPtr hwnd, uint dwAttribute, out Rect pvAttribute, int cbAttribute)
+        {
+                var hr = DwmGetWindowAttribute(hwnd, dwAttribute, out Win32Rect nativeRect, cbAttribute);
+                pvAttribute = Rect.FromWin32Rect(nativeRect);
+                return hr;
+        }
+
+        internal static bool GetWindowRect(IntPtr hWnd, out Rect lpRect)
+        {
+                var result = GetWindowRect(hWnd, out Win32Rect nativeRect);
+                lpRect = Rect.FromWin32Rect(nativeRect);
+                return result;
+        }
 }

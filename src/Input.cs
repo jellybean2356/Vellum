@@ -51,7 +51,7 @@ public static class Input
     public static bool WasMouseClicked(MouseButton button) => WasClickedState[(int)button];
     
     // update states for mouse input
-    internal static void UpdateStates(IntPtr window, SDL.FRect[] interactiveParts)
+    internal static void UpdateStates(IntPtr window, Rect[] interactiveParts)
     {
         SDL.GetGlobalMouseState(out var gx, out var gy);
         SDL.GetWindowPosition(window, out var wx, out var wy);

@@ -25,8 +25,8 @@ public class Test
         // run the window loop
         while (engine.Update())
         {
-            bool isHovering = Input.MouseX >= interactiveBox.X && Input.MouseX <= interactiveBox.X + interactiveBox.Width &&
-                              Input.MouseY >= interactiveBox.Y && Input.MouseY <= interactiveBox.Y + interactiveBox.Height;
+            bool isHovering = Input.MouseX >= interactiveBox.X && Input.MouseX <= interactiveBox.X + interactiveBox.W &&
+                              Input.MouseY >= interactiveBox.Y && Input.MouseY <= interactiveBox.Y + interactiveBox.H;
             
             // when dragging the box
             if (isHovering && Input.IsMouseDragging(MouseButton.Left) && !isDragging)

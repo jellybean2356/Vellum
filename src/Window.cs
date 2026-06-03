@@ -78,11 +78,9 @@ public class Window
             var hWindowMonitor = MonitorFromWindow(hWnd, 2);
             if (hWindowMonitor != hPrimaryMonitor) return true;
 
-            if (GetWindowRect(hWnd, out var rect))
+            if (GetWindowRect(hWnd, out Rect rect))
             {
-                var width = rect.Right - rect.Left;
-                var height = rect.Bottom - rect.Top;
-                if (width <= 0 || height <= 0) return true;
+                if (rect.W <= 0 || rect.H <= 0) return true;
             }
             else
             {
@@ -117,9 +115,9 @@ public class Window
     }
 
     // helper to get window bounds
-    public static Win32Rect GetVisualWindowBounds(IntPtr hWnd)
+    public static Rect GetVisualWindowBounds(IntPtr hWnd)
     {
-        var hr = DwmGetWindowAttribute(hWnd, DwmwaExtendedFrameBounds, out Win32Rect rect, Marshal.SizeOf<Win32Rect>());
+        var hr = DwmGetWindowAttribute(hWnd, DwmwaExtendedFrameBounds, out Rect rect, 16);
         if (hr != 0)
         {
             GetWindowRect(hWnd, out rect);
@@ -128,25 +126,16 @@ public class Window
         return rect;
     }
 
-    // helper method to translate window rect to FRect
-    public static SDL.FRect GetWindowFRect(IntPtr targetHwnd, IntPtr overlayHwnd)
+    // helper method to translate native window bounds into local coordinates
+    public static Rect GetLocalWindowsBounds(IntPtr targetHwnd, IntPtr overlayHwnd)
     {
         var targetRect = GetVisualWindowBounds(targetHwnd);
         var overlyRect = GetVisualWindowBounds(overlayHwnd);
 
-        float localX = targetRect.Left - overlyRect.Left;
-        float localY = targetRect.Top - overlyRect.Top;
+        float localX = targetRect.X - overlyRect.X;
+        float localY = targetRect.Y - overlyRect.Y;
 
-        float width = targetRect.Right - targetRect.Left;
-        float height = targetRect.Bottom - targetRect.Top;
-
-        return new SDL.FRect
-        {
-            X = localX,
-            Y = localY,
-            W = width,
-            H = height
-        };
+        return new Rect(localX, localY, targetRect.W, targetRect.H);
     }
 
     // configure the window to actually become overlay
@@ -157,7 +146,7 @@ public class Window
         
         MakeLayered(_activeWindow); // click-through
         
-        _openWindows = Window.GetWindowsHandles();
+        _openWindows = GetWindowsHandles();
         _openWindowsOld = GetWindowsHandles();
         _windowRects.AddRange(_openWindows);
     }
@@ -181,7 +170,7 @@ public class Window
         SDL.SetRenderDrawColor(_activeRenderer, 255, 0, 0, 255);
         foreach (var hwnd in _windowRects)
         {
-            var drawBox = Window.GetWindowFRect(hwnd, _activeWindow);
+            var drawBox = Window.GetLocalWindowsBounds(hwnd, _activeWindow);
             SDL.RenderRect(_activeRenderer, drawBox);
         }
     }

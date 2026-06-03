@@ -9,7 +9,7 @@ public class Engine : IDisposable
     private bool _isInitialized;
     private bool _isRunning;
     
-    private SDL.FRect[] _clickBounds = [];
+    private Rect[] _clickBounds = [];
 
     // initialize the engine
     public bool Initialize()
@@ -68,16 +68,15 @@ public class Engine : IDisposable
     // allows the user to set what objects should register inputs (makes certain objects not click through)
     public void SetInteractiveRegions(IEnumerable<Rect> regions)
     {
-        _clickBounds = regions.Select(r => r.ToSdl()).ToArray();
+        _clickBounds = regions.ToArray();
     }
 
     // draw function for full rectangle
     public void DrawFillRect(Rect rect, Color color)
     {
-        var sdlRect = rect.ToSdl();
         SDL.SetRenderDrawBlendMode(_renderer, SDL.BlendMode.Blend);
         SDL.SetRenderDrawColor(_renderer, color.R, color.G, color.B, color.A);
-        SDL.RenderFillRect(_renderer, in sdlRect);
+        SDL.RenderFillRect(_renderer, rect);
     }
 
     // send the buffer to the screen
