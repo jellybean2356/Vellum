@@ -9,9 +9,8 @@ public class Engine : IDisposable
     private bool _isInitialized;
     private bool _isRunning;
     
-    private Rect[] _clickBounds = []; // known issue, i didn't fully finished the interactions and how they behave in engine so its a rect for now
     internal static readonly List<IUpdatable> Updatables = new();
-    public static int GlobalHoverCount { get; set; } = 0;
+    public static int GlobalHoverCount { get; set; }
 
     public float DeltaTime { get; private set; }
 
@@ -64,13 +63,15 @@ public class Engine : IDisposable
         }
         
         // update input
-        Input.UpdateStates(Window, _clickBounds);
+        Input.UpdateStates(Window);
         
         // update updatables, e.g., class events like OnClick
-        foreach (var updatable in Updatables)
+        for (int i = Updatables.Count - 1; i >= 0; i--)
         {
-            updatable.Update(DeltaTime);
+            Updatables[i].Update(DeltaTime);
         }
+        
+        Vellum.Window.SetClickThrough(Window, GlobalHoverCount == 0);
         
         // clear the screen
         SDL.SetRenderDrawBlendMode(Renderer, SDL.BlendMode.None);

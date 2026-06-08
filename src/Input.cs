@@ -39,14 +39,14 @@ public static class Input
         return CurrentMouseStates[(int)button] && !PreviousMouseStates[(int)button];
     }
 
-    /// <summary> true on the frame the mouse button is let go regardless of whether a drag occurred. </summary>
+    /// <summary> true on the frame, the mouse button is let go. </summary>
     public static bool WasMouseReleased(MouseButton button) => WasReleasedState[(int)button];
 
-    /// <summary> true on the frame the mouse is let go ONLY if the cursor stayed within the drag threshold (a clean click). </summary>
+    /// <summary> true on the frame, the mouse is let go. </summary>
     public static bool WasMouseClicked(MouseButton button) => WasClickedState[(int)button];
     
     // update states for mouse input
-    internal static void UpdateStates(IntPtr window, Rect[] interactiveParts)
+    internal static void UpdateStates(IntPtr window)
     {
         // get mouse and window positions
         SDL.GetGlobalMouseState(out var gx, out var gy);

@@ -8,7 +8,6 @@ public class Interactive<TShape> : IUpdatable
     protected bool IsHovered;
 
     private readonly Func<TShape, float, float, bool>? _customHitTest;
-    private nint _window;
     
     // actions
     public Action? OnHoverEnter { get; set;}
@@ -24,9 +23,6 @@ public class Interactive<TShape> : IUpdatable
         
         // add to engines updatables
         Engine.Updatables.Add(this);
-        
-        // fetch window handle
-        _window = Engine.Window;
     }
 
     public virtual void Update(float deltaTime)
@@ -51,9 +47,6 @@ public class Interactive<TShape> : IUpdatable
             Engine.GlobalHoverCount--; 
             OnHoverExit?.Invoke(); 
         }
-        
-        // set click-through to false if mouse is over interactive parts
-        Window.SetClickThrough(_window, Engine.GlobalHoverCount == 0);
         
         if (overInteractive)
         {
