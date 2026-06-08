@@ -1,5 +1,10 @@
 ﻿using SDL3;
-namespace Vellum;
+using Vellum.Geometry;
+using Vellum.Graphics;
+using Vellum.Platform;
+using Vellum.Input;
+
+namespace Vellum.Core;
 
 public class Engine : IDisposable
 {
@@ -24,23 +29,47 @@ public class Engine : IDisposable
             SDL.LogError(SDL.LogCategory.System, $"SDL could not initialize! SDL_Error: {SDL.GetError()}");
             return false;
         }
-        SDL.SetHint(SDL.Hints.RenderDriver, "software");
         
         // create window
-        Window = SDL.CreateWindow("Vellum", 0, 0, Vellum.Window.DefaultOverlayFlags);
+        Window = SDL.CreateWindow("Vellum", 0, 0, Vellum.Platform.Window.DefaultOverlayFlags);
         if (Window == IntPtr.Zero)
         {
             SDL.LogError(SDL.LogCategory.Application, $"SDL could not create window! SDL_Error: {SDL.GetError()}");
-        }
-
-        // create renderer
-        Renderer = SDL.CreateRenderer(Window, "software");
-        if (Renderer == IntPtr.Zero)
-        {
-            SDL.LogError(SDL.LogCategory.Application, $"SDL could not create renderer! SDL_Error: {SDL.GetError()}");
+            return false;
         }
         
-        Vellum.Window.ConfigureOverlay(Window, Renderer);
+        // WORKING drivers, there are issues with direct3d drivers that i didnt manage to fix
+        string[] preferredDrivers = ["vulkan", "opengl", "opengles2"];
+    
+        // try each driver to get at least one working renderer
+        foreach (var driver in preferredDrivers)
+        {
+            Renderer = SDL.CreateRenderer(Window, driver);
+            if (Renderer != IntPtr.Zero)
+            {
+                SDL.Log($"Successfully initialized renderer using driver: {driver}");
+                break;
+            }
+        }
+
+        // fallback to software driver (CPU rendering)
+        if (Renderer == IntPtr.Zero)
+        {
+            SDL.LogWarn(SDL.LogCategory.Application, "Preferred hardware drivers failed. Falling back to software.");
+            Renderer = SDL.CreateRenderer(Window, "software");
+        }
+
+        if (Renderer == IntPtr.Zero)
+        {
+            SDL.LogError(SDL.LogCategory.Application, $"SDL could not create any renderer! SDL_Error: {SDL.GetError()}");
+            return false;
+        }
+        
+        // configure stuff
+        IntPtr hwnd = Vellum.Platform.Window.GetHwnd(Window);
+        Vellum.Platform.Window.ConfigureOverlay(Window, Renderer);
+        NativeMethods.DwmExtendFrameIntoClientArea(hwnd, new Rect(-1, -1, -1, -1)); // setting margins to -1 to force window to fill client area which triggers a "glass" like effect
+        
         _isInitialized = true;
         _isRunning = true;
         return true;
@@ -63,7 +92,7 @@ public class Engine : IDisposable
         }
         
         // update input
-        Input.UpdateStates(Window);
+        Input.Input.UpdateStates(Window);
         
         // update updatables, e.g., class events like OnClick
         for (int i = Updatables.Count - 1; i >= 0; i--)
@@ -71,7 +100,7 @@ public class Engine : IDisposable
             Updatables[i].Update(DeltaTime);
         }
         
-        Vellum.Window.SetClickThrough(Window, GlobalHoverCount == 0);
+        Vellum.Platform.Window.SetClickThrough(Window, GlobalHoverCount == 0);
         
         // clear the screen
         SDL.SetRenderDrawBlendMode(Renderer, SDL.BlendMode.None);
@@ -111,7 +140,7 @@ public class Engine : IDisposable
         if (Renderer != IntPtr.Zero) SDL.DestroyRenderer(Renderer);
         if (Window != IntPtr.Zero) SDL.DestroyWindow(Window);
         
-        Vellum.Window.ClearActiveHandles();
+        Vellum.Platform.Window.ClearActiveHandles();
         
         SDL.Quit();
         GC.SuppressFinalize(this);

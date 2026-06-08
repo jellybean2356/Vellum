@@ -1,4 +1,4 @@
-﻿namespace Vellum;
+﻿namespace Vellum.Input;
 
 public enum MouseButton
 {

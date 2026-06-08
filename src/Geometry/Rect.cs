@@ -1,6 +1,7 @@
 ﻿using SDL3;
+using Vellum.Platform;
 
-namespace Vellum;
+namespace Vellum.Geometry;
 
 public class Rect(float x, float y, float w, float h) : IShape
 {

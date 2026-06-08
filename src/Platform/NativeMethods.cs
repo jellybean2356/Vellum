@@ -1,7 +1,7 @@
 ﻿using System.Runtime.InteropServices;
-using System.Runtime.InteropServices.Marshalling;
+using Vellum.Geometry;
 
-namespace Vellum;
+namespace Vellum.Platform;
 
 internal partial class NativeMethods
 {
@@ -40,12 +40,18 @@ internal partial class NativeMethods
         [LibraryImport("user32.dll")]
         internal static partial IntPtr GetWindow(IntPtr hWnd, uint uCmd);
         
+        [LibraryImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+        
         [LibraryImport("dwmapi.dll")]
         internal static partial int DwmGetWindowAttribute(IntPtr hwnd, uint dwAttribute, out int pvAttribute, int cbAttribute);
-    
-        // Explicitly use out Win32Rect for window bounds
+
         [LibraryImport("dwmapi.dll")]
         internal static partial int DwmGetWindowAttribute(IntPtr hwnd, uint dwAttribute, out Win32Rect pvAttribute, int cbAttribute);
+        
+        [LibraryImport("dwmapi.dll", EntryPoint = "DwmExtendFrameIntoClientArea")]
+        private static partial int DwmExtendFrameIntoClientAreaNative(IntPtr hWnd, ref Margins pMarInset);
         
         [LibraryImport("user32.dll")]
         internal static partial IntPtr MonitorFromPoint(Win32Point pt, uint dwFlags);
@@ -66,6 +72,9 @@ internal partial class NativeMethods
         [StructLayout(LayoutKind.Sequential)]
         internal struct Win32Rect { internal int Left; internal int Top; internal int Right; internal int Bottom; }
         
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct Margins { public int Left; public int Right; public int Top; public int Bottom; }
+        
         internal static int DwmGetWindowAttribute(IntPtr hwnd, uint dwAttribute, out Rect pvAttribute, int cbAttribute)
         {
                 var hr = DwmGetWindowAttribute(hwnd, dwAttribute, out Win32Rect nativeRect, cbAttribute);
@@ -78,5 +87,18 @@ internal partial class NativeMethods
                 var result = GetWindowRect(hWnd, out Win32Rect nativeRect);
                 lpRect = Rect.FromWin32Rect(nativeRect);
                 return result;
+        }
+        
+        internal static int DwmExtendFrameIntoClientArea(IntPtr hWnd, Rect rect)
+        {
+                var nativeMargins = new Margins
+                {
+                        Left = (int)rect.X,
+                        Right = (int)rect.W,
+                        Top = (int)rect.Y,
+                        Bottom = (int)rect.H
+                };
+    
+                return DwmExtendFrameIntoClientAreaNative(hWnd, ref nativeMargins);
         }
 }

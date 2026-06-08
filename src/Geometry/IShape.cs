@@ -1,4 +1,4 @@
-﻿namespace Vellum;
+﻿namespace Vellum.Geometry;
 
 public interface IShape
 {

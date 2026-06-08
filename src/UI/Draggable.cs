@@ -1,4 +1,7 @@
-﻿namespace Vellum;
+﻿using Vellum.Geometry;
+using Vellum.Input;
+
+namespace Vellum.UI;
 
 public sealed class Draggable<TShape>(TShape bounds, Func<TShape, float, float, bool>? customHitTest = null) : 
     Interactive<TShape>(bounds, customHitTest) 
@@ -24,11 +27,11 @@ public sealed class Draggable<TShape>(TShape bounds, Func<TShape, float, float, 
         if (_isDragging)
         {
             // X or Y axis locking + drag application
-            if (!LockHorizontal) Bounds.X = Input.MouseX - _grabOffsetX;
-            if (!LockVertical) Bounds.Y = Input.MouseY - _grabOffsetY;
+            if (!LockHorizontal) Bounds.X = Input.Input.MouseX - _grabOffsetX;
+            if (!LockVertical) Bounds.Y = Input.Input.MouseY - _grabOffsetY;
             
             // when mouse releases, stop dragging
-            if (Input.WasMouseReleased(MouseButton.Left))
+            if (Input.Input.WasMouseReleased(MouseButton.Left))
             {
                 _isDragging = false;
             }
@@ -36,8 +39,8 @@ public sealed class Draggable<TShape>(TShape bounds, Func<TShape, float, float, 
         else if (_isHolding) 
         {
             // drag calculation
-            var dx = Input.MouseX - _startMouseX;
-            var dy = Input.MouseY - _startMouseY;
+            var dx = Input.Input.MouseX - _startMouseX;
+            var dy = Input.Input.MouseY - _startMouseY;
             var distanceSq = (dx * dx) + (dy * dy);
             
             if (distanceSq >= DragThreshold * DragThreshold)
@@ -46,7 +49,7 @@ public sealed class Draggable<TShape>(TShape bounds, Func<TShape, float, float, 
                 _isHolding = false;
             }
             
-            if (Input.WasMouseReleased(MouseButton.Left))
+            if (Input.Input.WasMouseReleased(MouseButton.Left))
             {
                 _isHolding = false;
             }
@@ -54,15 +57,15 @@ public sealed class Draggable<TShape>(TShape bounds, Func<TShape, float, float, 
         else
         {
             // when mouse is over the bounds and pressed, start dragging
-            if (IsHovered && Input.WasMousePressed(MouseButton.Left))
+            if (IsHovered && Input.Input.WasMousePressed(MouseButton.Left))
             {
                 _isHolding = true;
                 
-                _startMouseX = Input.MouseX;
-                _startMouseY = Input.MouseY;
+                _startMouseX = Input.Input.MouseX;
+                _startMouseY = Input.Input.MouseY;
                 
-                _grabOffsetX = Input.MouseX - Bounds.X;
-                _grabOffsetY = Input.MouseY - Bounds.Y;
+                _grabOffsetX = Input.Input.MouseX - Bounds.X;
+                _grabOffsetY = Input.Input.MouseY - Bounds.Y;
             }
         }
     }

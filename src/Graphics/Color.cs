@@ -1,4 +1,4 @@
-﻿namespace Vellum;
+﻿namespace Vellum.Graphics;
 
 public struct Color(byte r, byte g, byte b, byte a = 255) // basic RGBA color struct + default colors
 {

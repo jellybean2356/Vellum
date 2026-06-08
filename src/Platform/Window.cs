@@ -1,7 +1,8 @@
 ﻿using SDL3;
-using static Vellum.NativeMethods;
+using static Vellum.Platform.NativeMethods;
+using Vellum.Geometry;
 
-namespace Vellum;
+namespace Vellum.Platform;
 
 public class Window
 {
@@ -40,6 +41,10 @@ public class Window
         // set ExStyle to layered and transparent
         var exStyle = GetWindowLongPtr(hwnd, GwlExstyle).ToInt64();
         _ = SetWindowLongPtr(hwnd, GwlExstyle, new IntPtr(exStyle | WsExLayered | WsExTransparent | WsExToolWindow));
+        
+        // force windows os to redraw the window
+        NativeMethods.SetWindowPos(hwnd, IntPtr.Zero, 0, 0, 0, 0, 0x0027);
+        
         _clickThrough = true;
     }
 
@@ -189,6 +194,9 @@ public class Window
             exStyle &= ~WsExTransparent;
         
         _ = SetWindowLongPtr(hwnd, GwlExstyle, new IntPtr(exStyle));
+        
+        // force windows os to redraw the window
+        NativeMethods.SetWindowPos(hwnd, IntPtr.Zero, 0, 0, 0, 0, 0x0027);
         
         _clickThrough = enabled;
     }

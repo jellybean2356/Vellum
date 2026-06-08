@@ -1,6 +1,7 @@
 ﻿using SDL3;
+using Vellum.Platform;
 
-namespace Vellum;
+namespace Vellum.Input;
 
 public static class Input
 {
@@ -12,8 +13,6 @@ public static class Input
 
     private static readonly bool[] CurrentMouseStates = new bool[7];
     private static readonly bool[] PreviousMouseStates = new bool[7];
-    private static readonly float[] PressPositionsX = new float[7];
-    private static readonly float[] PressPositionsY = new float[7];
     
     private static readonly bool[] WasClickedState = new bool[7];
     private static readonly bool[] WasReleasedState = new bool[7];

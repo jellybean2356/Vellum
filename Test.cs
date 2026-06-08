@@ -1,9 +1,13 @@
-﻿namespace Vellum;
+﻿using Vellum.UI;
+using Vellum.Core;
+using Vellum.Graphics;
+using Vellum.Geometry;
 
 /*
     DEMO TEST FOR VELLUM. This project WON'T work like it does now. I will be working on DLL soon, this is a testing file and will not be included in the final package
 */
 
+namespace Vellum;
 public class Test
 {
     private static void Main()
