@@ -175,6 +175,7 @@ public class Window
         }
     }
 
+    // change click-through (true, false) for window, partial click trough is implemented in Interactive.cs
     internal static void SetClickThrough(IntPtr window, bool enabled)
     {
         if (enabled == _clickThrough) return;

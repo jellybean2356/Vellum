@@ -2,12 +2,12 @@
 
 namespace Vellum;
 
-public struct Rect(float x, float y, float w, float h)
+public class Rect(float x, float y, float w, float h) : IShape
 {
-    public float X = x;
-    public float Y = y;
-    public float W = w;
-    public float H = h;
+    public float X { get; set; } = x;
+    public float Y { get; set; } = y;
+    public float W { get; set; } = w;
+    public float H { get; set; } = h;
 
     // ===================================
     // CONVERT TO
@@ -40,5 +40,11 @@ public struct Rect(float x, float y, float w, float h)
     // converting Rect to Win32Rect while keeping it internal (1st part of the logic, second in NativeMethods.cs)
     internal static Rect FromWin32Rect(NativeMethods.Win32Rect r) =>
         new(r.Left, r.Top, r.Right - r.Left, r.Bottom - r.Top);
-    
+
+    // check if a point is inside the rect (for basic UI interactions, used by Interactive<> generic wrapper)
+    public bool ContainsPoint(float pointX, float pointY)
+    {
+        return pointX >= X && pointX <= X + W &&
+               pointY >= Y && pointY <= Y + H;
+    }
 }

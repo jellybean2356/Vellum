@@ -12,68 +12,42 @@ public class Test
         using var engine = new Engine();
         if (!engine.Initialize()) return;
         
-        var interactiveBox = new Rect(100, 100, 150, 150);
-        bool isDragging = false;
-        
-        float offsetX = 0;
-        float offsetY = 0;
+        Color colorState = Color.Red; // draggable + interactable square
+        Color colorState2 = Color.Orange; // interactable square
 
-        // click configuration
-        long blinkEndTime = 0;
-        const long blinkDurationMs = 50;
+        var startButton = new Draggable<Rect>(new Rect(10, 10, 200, 50)) // draggable square, includes events from interactive
+        {
+            OnClicked = async void () =>
+            {
+                Console.WriteLine("Clicked!");
+                colorState = Color.Green;
+                await Task.Delay(100);
+                colorState = Color.Red;
+            },
+        };
+        
+        var startButton2 = new Interactive<Rect>(new Rect(500, 500, 200, 50)) // interactable square
+        {
+            OnClicked = async void () =>
+            {
+                Console.WriteLine("Clicked!");
+                colorState2 = Color.Magenta;
+                await Task.Delay(100);
+                colorState2 = Color.Orange;
+            },
+        };
+
+        var rect = new Rect(800, 800, 200, 50); // casual square
 
         // run the window loop
         while (engine.Update())
         {
-            bool isHovering = Input.MouseX >= interactiveBox.X && Input.MouseX <= interactiveBox.X + interactiveBox.W &&
-                              Input.MouseY >= interactiveBox.Y && Input.MouseY <= interactiveBox.Y + interactiveBox.H;
-            
-            // when dragging the box
-            if (isHovering && Input.IsMouseDragging(MouseButton.Left) && !isDragging)
-            {
-                isDragging = true;
-                offsetX = Input.MouseX - interactiveBox.X;
-                offsetY = Input.MouseY - interactiveBox.Y;
-            }
-            
-            if (isDragging)
-            {
-                interactiveBox.X = Input.MouseX - offsetX;
-                interactiveBox.Y = Input.MouseY - offsetY;
+            // draw
+            engine.DrawFillRect(startButton, colorState);
+            engine.DrawFillRect(startButton2, colorState2);
+            engine.DrawFillRect(rect, Color.Blue);
 
-                if (Input.WasMouseReleased(MouseButton.Left))
-                {
-                    isDragging = false;
-                }
-            }
-
-            // when clicked on the box
-            if (isHovering && Input.WasMouseClicked(MouseButton.Left))
-            {
-                blinkEndTime = Environment.TickCount64 + blinkDurationMs;
-            }
-            
-            List<Rect> interactiveAreas = [ interactiveBox ];
-            engine.SetInteractiveRegions(interactiveAreas);
-            
-            // render the square with different colors based on the state
-            Color boxColor;
-            if (isDragging)
-            {
-                boxColor = Color.Green; // green when moving
-            }
-            else if (Environment.TickCount64 < blinkEndTime)
-            {
-                boxColor = Color.Orange; // orange flash when clicked
-            }
-            else
-            {
-                boxColor = Color.Red; // red default
-            }
-
-            engine.DrawFillRect(interactiveBox, boxColor);
-            
-            Window.DrawDebugWindows();
+            // send the buffer to the screen
             engine.Present();
         }
     }
