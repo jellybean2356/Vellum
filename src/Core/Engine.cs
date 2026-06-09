@@ -111,6 +111,24 @@ public class Engine : IDisposable
         SDL.SetRenderDrawColor(Renderer, color.R, color.G, color.B, color.A);
         SDL.RenderFillRect(Renderer, rect);
     }
+    
+    // draw function for full circle
+    public void DrawFillCircle(Circle circle, Color color)
+    {
+        SDL.SetRenderDrawBlendMode(Renderer, SDL.BlendMode.Blend);
+        SDL.SetRenderDrawColor(Renderer, color.R, color.G, color.B, color.A);
+
+        var cx = (int)circle.X;
+        var cy = (int)circle.Y;
+        var r = (int)circle.Radius;
+
+        // scan vertically and draw horizontal lines across the width of the circle
+        for (var y = -r; y <= r; y++)
+        {
+            var width = (int)MathF.Sqrt(r * r - y * y);
+            SDL.RenderLine(Renderer, cx - width, cy + y, cx + width, cy + y);
+        }
+    }
 
     // send the buffer to the screen
     public void Present()

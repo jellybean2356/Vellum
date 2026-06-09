@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Vellum.UI;
 using Vellum.Geometry;
 using Vellum.Graphics;
@@ -19,41 +18,24 @@ public class Test
         using var engine = new Engine();
         if (!engine.Initialize()) return;
         
-        var colorState = Color.Red; // draggable + interactable square
-        var colorState2 = Color.Orange; // interactable square
+        var colorState = Color.Red;
 
-        var startButton = new Draggable<Rect>(new Rect(10, 10, 200, 50)) // draggable square, includes events from interactive
+        var circle = new Draggable<Circle>(new Circle(100f, 100f, 50f))
         {
             OnClicked = async void () =>
             {
-                Console.WriteLine("Clicked!");
-                colorState = Color.Green;
+                colorState = Color.Blue;
                 await Task.Delay(100);
                 colorState = Color.Red;
             },
         };
-        
-        var startButton2 = new Interactive<Rect>(new Rect(500, 500, 200, 50)) // interactable square
-        {
-            OnClicked = async void () =>
-            {
-                Console.WriteLine("Clicked!");
-                colorState2 = Color.Magenta;
-                await Task.Delay(100);
-                colorState2 = Color.Orange;
-            },
-        };
-
-        var rect = new Rect(800, 800, 200, 50); // casual square
 
         // run the window loop
         while (engine.Update())
         {
             // draw
-            engine.DrawFillRect(startButton, colorState);
-            engine.DrawFillRect(startButton2, colorState2);
-            engine.DrawFillRect(rect, Color.Blue);
-
+            engine.DrawFillCircle(circle, colorState);
+            
             // send the buffer to the screen
             engine.Present();
         }
