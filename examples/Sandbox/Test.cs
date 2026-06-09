@@ -1,13 +1,16 @@
-﻿using Vellum.UI;
-using Vellum.Core;
-using Vellum.Graphics;
+﻿using System;
+using System.Threading.Tasks;
+using Vellum.UI;
 using Vellum.Geometry;
+using Vellum.Graphics;
+using Vellum.Core;
 
 /*
-    DEMO TEST FOR VELLUM. This project WON'T work like it does now. I will be working on DLL soon, this is a testing file and will not be included in the final package
+    Demo test sandbox for vellum, i try stuff out here
 */
 
-namespace Vellum;
+namespace Sandbox;
+
 public class Test
 {
     private static void Main()
@@ -16,8 +19,8 @@ public class Test
         using var engine = new Engine();
         if (!engine.Initialize()) return;
         
-        Color colorState = Color.Red; // draggable + interactable square
-        Color colorState2 = Color.Orange; // interactable square
+        var colorState = Color.Red; // draggable + interactable square
+        var colorState2 = Color.Orange; // interactable square
 
         var startButton = new Draggable<Rect>(new Rect(10, 10, 200, 50)) // draggable square, includes events from interactive
         {

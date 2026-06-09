@@ -1,9 +1,4 @@
-﻿using Vellum.Core;
-using Vellum.Geometry;
-using Vellum.Input;
-
-
-namespace Vellum.UI;
+﻿namespace Vellum.UI;
 
 public class Interactive<TShape> : IUpdatable , IDisposable
     where TShape : class, IShape

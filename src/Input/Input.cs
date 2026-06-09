@@ -1,7 +1,4 @@
-﻿using SDL3;
-using Vellum.Platform;
-
-namespace Vellum.Input;
+﻿namespace Vellum.Input;
 
 public static class Input
 {

@@ -1,8 +1,4 @@
-﻿using SDL3;
-using static Vellum.Platform.NativeMethods;
-using Vellum.Geometry;
-
-namespace Vellum.Platform;
+﻿namespace Vellum.Platform;
 
 public class Window
 {

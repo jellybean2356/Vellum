@@ -1,7 +1,4 @@
-﻿using System.Runtime.InteropServices;
-using Vellum.Geometry;
-
-namespace Vellum.Platform;
+﻿namespace Vellum.Platform;
 
 internal partial class NativeMethods
 {

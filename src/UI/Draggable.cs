@@ -1,7 +1,4 @@
-﻿using Vellum.Geometry;
-using Vellum.Input;
-
-namespace Vellum.UI;
+﻿namespace Vellum.UI;
 
 public sealed class Draggable<TShape>(TShape bounds, Func<TShape, float, float, bool>? customHitTest = null) : 
     Interactive<TShape>(bounds, customHitTest) 

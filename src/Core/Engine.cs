@@ -1,10 +1,4 @@
-﻿using SDL3;
-using Vellum.Geometry;
-using Vellum.Graphics;
-using Vellum.Platform;
-using Vellum.Input;
-
-namespace Vellum.Core;
+﻿namespace Vellum.Core;
 
 public class Engine : IDisposable
 {
