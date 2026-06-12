@@ -9,7 +9,6 @@ public class Window : IDisposable
     public string Title => SDL.GetWindowTitle(Handle);
     public bool IsValid => Handle != IntPtr.Zero;
     public WindowFlags Flags { get; }
-    public static int HoverCount { get; set; }
 
     private Window(IntPtr handle, WindowFlags flags, WindowType type)
     {
@@ -108,19 +107,5 @@ public class Window : IDisposable
         if (flags.HasFlag(WindowFlags.Transparent))  sdlFlags |= SDL.WindowFlags.Transparent;
         if (flags.HasFlag(WindowFlags.NotFocusable)) sdlFlags |= SDL.WindowFlags.NotFocusable;
         return sdlFlags;
-    }
-
-    internal void UpdateBehavior()
-    {
-        if (Type == WindowType.Overlay) SetClickThrough(HoverCount == 0);
-    }
-    
-    internal void OnRendererInitialized()
-    {
-        if (Type == WindowType.Overlay)
-        {
-            WindowUtils.ConfigureOverlay(this);
-            DwmExtendFrameIntoClientArea(Hwnd, new Rect(-1, -1, -1, -1)); 
-        }
     }
 }

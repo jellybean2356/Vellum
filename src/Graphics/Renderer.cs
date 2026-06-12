@@ -40,7 +40,6 @@ public class Renderer : IDisposable
             SDL.LogError(SDL.LogCategory.Application, $"SDL could not create any renderer context! SDL_Error: {SDL.GetError()}");
         }
         
-        window.OnRendererInitialized();
         return new Renderer(handle);
     }
 

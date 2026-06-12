@@ -26,6 +26,12 @@ public class Engine : IDisposable
         
         Window = Window.CreateOverlay("Vellum Engine");
         Renderer = Renderer.Create(Window);
+
+        if (Window.Type == WindowType.Overlay)
+        {
+            WindowUtils.ConfigureOverlay(Window);
+            DwmExtendFrameIntoClientArea(Window.Hwnd, new Rect(-1, -1, -1, -1)); 
+        }
         
         Renderer.Clear(Color.Transparent);
         Renderer.Present();
@@ -51,10 +57,9 @@ public class Engine : IDisposable
             }
         }
         
-        Window.UpdateBehavior();
-        
         // update input
         Input.Input.UpdateStates(Window.Handle);
+        Renderer.Clear(Color.Transparent);
         
         // update updatables, e.g., class events like OnClick
         for (int i = Updatables.Count - 1; i >= 0; i--)
@@ -62,7 +67,7 @@ public class Engine : IDisposable
             Updatables[i].Update(DeltaTime);
         }
         
-        Renderer.Clear(Color.Transparent);
+        if (Window.Type == WindowType.Overlay) Window.SetClickThrough(GlobalHoverCount == 0);
 
         return true;
     }
