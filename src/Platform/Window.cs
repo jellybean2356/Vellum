@@ -37,11 +37,11 @@ public class Window : IDisposable
     public void MakeLayered()
     {
         // set ExStyle to layered and transparent
-        var exStyle = GetWindowLongPtr(Handle, GwlExstyle).ToInt64();
-        _ = SetWindowLongPtr(Handle, GwlExstyle, new IntPtr(exStyle | WsExLayered | WsExTransparent | WsExToolWindow));
+        var exStyle = GetWindowLongPtr(Hwnd, GwlExstyle).ToInt64();
+        _ = SetWindowLongPtr(Hwnd, GwlExstyle, new IntPtr(exStyle | WsExLayered | WsExTransparent | WsExToolWindow));
         
         // force windows os to redraw the window
-        NativeMethods.SetWindowPos(Handle, IntPtr.Zero, 0, 0, 0, 0, 0x0027);
+        SetWindowPos(Hwnd, IntPtr.Zero, 0, 0, 0, 0, 0x0027);
         
         _clickThrough = true;
     }
