@@ -24,8 +24,8 @@ public class Engine : IDisposable
             return false;
         }
         
-        Window = new Window("Vellum Engine", 0, 0, WindowFlags.DefaultOverlay);
-        Renderer = new Renderer(Window);
+        Window = Window.Create("Vellum Engine", 0, 0, WindowFlags.DefaultOverlay);
+        Renderer = Renderer.Create(Window);
         
         Renderer.Clear(Color.Transparent);
         Renderer.Present();

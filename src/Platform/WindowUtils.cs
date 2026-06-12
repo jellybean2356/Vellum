@@ -2,6 +2,10 @@
 
 public class WindowUtils
 {
+    private static List<IntPtr> _openWindows = [];
+    private static List<IntPtr> _openWindowsOld = [];
+    private static List<IntPtr> _windowRects = [];
+    
     // helper method to get hwnd
     public static IntPtr GetHwnd(IntPtr window)
     {
@@ -101,5 +105,40 @@ public class WindowUtils
         float localY = targetRect.Y - overlyRect.Y;
 
         return new Rect(localX, localY, targetRect.W, targetRect.H);
+    }
+    
+    // configure the window to actually become overlay
+    internal static void ConfigureOverlay(Window window)
+    {
+        window.MakeLayered(); // click-through
+        
+        _openWindows = GetWindowsHandles();
+        _openWindowsOld = GetWindowsHandles();
+        _windowRects.AddRange(_openWindows);
+    }
+
+    
+    // draw debug squares around windows + print when window enters overlay
+    public static void DrawDebugWindows(Window window, Renderer renderer)
+    {
+        _openWindows = WindowUtils.GetWindowsHandles();
+        var difference = _openWindows.Except(_openWindowsOld).ToList();
+        foreach (var hwnd in difference)
+        {
+            Console.WriteLine($"found HWND: 0x{hwnd.ToString("X")} | Application: {WindowUtils.GetWindowTitle(hwnd)}");
+            if (!_windowRects.Contains(hwnd))
+            {
+                _windowRects.Add(hwnd); 
+            }
+        }
+        _openWindowsOld = _openWindows;
+        _windowRects.RemoveAll(hwnd => !_openWindows.Contains(hwnd));
+        
+        SDL.SetRenderDrawColor(renderer.Handle, 255, 0, 0, 255);
+        foreach (var hwnd in _windowRects)
+        {
+            var drawBox = WindowUtils.GetLocalWindowsBounds(hwnd, window.Handle);
+            SDL.RenderRect(renderer.Handle, drawBox);
+        }
     }
 }

@@ -1,26 +1,27 @@
-﻿using Vellum.Platform;
-
-namespace Vellum.Graphics;
+﻿namespace Vellum.Graphics;
 
 public class Renderer : IDisposable
 {
-    private static List<IntPtr> _openWindows = [];
-    private static List<IntPtr> _openWindowsOld = [];
-    private static List<IntPtr> _windowRects = [];
-    
     internal IntPtr Handle{get; private set;}
     public bool IsValid => Handle != IntPtr.Zero;
 
-    public Renderer(Window window)
+    private Renderer(IntPtr handle)
     {
+        Handle = handle;
+    }
+
+    // create renderer
+    public static Renderer Create(Window window)
+    {
+        var handle = IntPtr.Zero;
         // WORKING drivers, there are issues with direct3d drivers that i didnt manage to fix
         string[] preferredDrivers = ["vulkan", "opengl", "opengles2"];
     
         // try each driver to get at least one working renderer
         foreach (var driver in preferredDrivers)
         {
-            Handle = SDL.CreateRenderer(window.Handle, driver);
-            if (Handle != IntPtr.Zero)
+            handle = SDL.CreateRenderer(window.Handle, driver);
+            if (handle != IntPtr.Zero)
             {
                 SDL.Log($"Renderer subsystem successfully initialized using driver: {driver}");
                 break;
@@ -28,20 +29,21 @@ public class Renderer : IDisposable
         }
 
         // fallback to CPU-bound software rendering if hardware initialization fails
-        if (Handle == IntPtr.Zero)
+        if (handle == IntPtr.Zero)
         {
             SDL.LogWarn(SDL.LogCategory.Application, "Preferred hardware drivers failed. Falling back to software renderer.");
-            Handle = SDL.CreateRenderer(window.Handle, "software");
+            handle = SDL.CreateRenderer(window.Handle, "software");
         }
 
-        if (Handle == IntPtr.Zero)
+        if (handle == IntPtr.Zero)
         {
             SDL.LogError(SDL.LogCategory.Application, $"SDL could not create any renderer context! SDL_Error: {SDL.GetError()}");
         }
         
         // configure stuff
-        ConfigureOverlay(window, Handle);
+        WindowUtils.ConfigureOverlay(window);
         DwmExtendFrameIntoClientArea(window.Hwnd, new Rect(-1, -1, -1, -1)); // setting margins to -1 to force window to fill client area which triggers a "glass" like effect
+        return new Renderer(handle);
     }
 
     // clear the buffer
@@ -89,41 +91,6 @@ public class Renderer : IDisposable
         }
     }
     
-    // configure the window to actually become overlay
-    internal void ConfigureOverlay(Window window, IntPtr renderer)
-    {
-        window.MakeLayered(); // click-through
-        
-        _openWindows = WindowUtils.GetWindowsHandles();
-        _openWindowsOld = WindowUtils.GetWindowsHandles();
-        _windowRects.AddRange(_openWindows);
-    }
-    
-    
-    // draw debug squares around windows + print when window enters overlay
-    public void DrawDebugWindows(Window window)
-    {
-        _openWindows = WindowUtils.GetWindowsHandles();
-        var difference = _openWindows.Except(_openWindowsOld).ToList();
-        foreach (var hwnd in difference)
-        {
-            Console.WriteLine($"found HWND: 0x{hwnd.ToString("X")} | Application: {WindowUtils.GetWindowTitle(hwnd)}");
-            if (!_windowRects.Contains(hwnd))
-            {
-                _windowRects.Add(hwnd); 
-            }
-        }
-        _openWindowsOld = _openWindows;
-        _windowRects.RemoveAll(hwnd => !_openWindows.Contains(hwnd));
-        
-        SDL.SetRenderDrawColor(Handle, 255, 0, 0, 255);
-        foreach (var hwnd in _windowRects)
-        {
-            var drawBox = WindowUtils.GetLocalWindowsBounds(hwnd, window.Handle);
-            SDL.RenderRect(Handle, drawBox);
-        }
-    }
-
     public void Dispose()
     {
         if (Handle != IntPtr.Zero)
