@@ -5,14 +5,17 @@ public class Window : IDisposable
     private bool _clickThrough;
     public IntPtr Handle { get; private set; }
     public IntPtr Hwnd => WindowUtils.GetHwnd(Handle);
+    public WindowType Type { get; private set; }
     public string Title => SDL.GetWindowTitle(Handle);
     public bool IsValid => Handle != IntPtr.Zero;
     public WindowFlags Flags { get; }
+    public static int HoverCount { get; set; }
 
-    private Window(IntPtr handle, WindowFlags flags)
+    private Window(IntPtr handle, WindowFlags flags, WindowType type)
     {
         Flags = flags;
         Handle = handle;
+        Type = type;
     }
 
     // create window
@@ -20,7 +23,24 @@ public class Window : IDisposable
     {
         SDL.WindowFlags sdlFlags = MapFlags(flags);
         IntPtr handle = SDL.CreateWindow(title, width, height, sdlFlags);
-        return new Window(handle, flags);
+        return new Window(handle, flags, WindowType.Standard);
+    }
+
+    public static Window CreateOverlay(string title, uint displayId = 0)
+    {
+        if (displayId == 0) displayId = WindowUtils.GetScreenDisplayIds()[0];
+        SDL.GetDisplayBounds(displayId, out var rect);
+        
+        var flags = WindowFlags.DefaultOverlay;
+        SDL.WindowFlags sdlFlags = MapFlags(flags);
+        
+        IntPtr handle = SDL.CreateWindow(title, rect.W, rect.H, sdlFlags);
+        var window = new Window(handle, flags, WindowType.Overlay);
+        
+        window.SetPosition(rect.X, rect.Y);
+        window.MakeLayered(); 
+        
+        return window;
     }
     
     // map SDL window functions to Window
@@ -88,5 +108,19 @@ public class Window : IDisposable
         if (flags.HasFlag(WindowFlags.Transparent))  sdlFlags |= SDL.WindowFlags.Transparent;
         if (flags.HasFlag(WindowFlags.NotFocusable)) sdlFlags |= SDL.WindowFlags.NotFocusable;
         return sdlFlags;
+    }
+
+    internal void UpdateBehavior()
+    {
+        if (Type == WindowType.Overlay) SetClickThrough(HoverCount == 0);
+    }
+    
+    internal void OnRendererInitialized()
+    {
+        if (Type == WindowType.Overlay)
+        {
+            WindowUtils.ConfigureOverlay(this);
+            DwmExtendFrameIntoClientArea(Hwnd, new Rect(-1, -1, -1, -1)); 
+        }
     }
 }

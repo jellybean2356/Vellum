@@ -40,9 +40,7 @@ public class Renderer : IDisposable
             SDL.LogError(SDL.LogCategory.Application, $"SDL could not create any renderer context! SDL_Error: {SDL.GetError()}");
         }
         
-        // configure stuff
-        WindowUtils.ConfigureOverlay(window);
-        DwmExtendFrameIntoClientArea(window.Hwnd, new Rect(-1, -1, -1, -1)); // setting margins to -1 to force window to fill client area which triggers a "glass" like effect
+        window.OnRendererInitialized();
         return new Renderer(handle);
     }
 
