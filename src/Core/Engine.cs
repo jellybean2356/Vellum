@@ -3,17 +3,17 @@
 public class Engine : IDisposable
 {
     // private variables
-    internal static IntPtr Window;
-    internal static IntPtr Renderer;
     private bool _isInitialized;
     private bool _isRunning;
+    
+    public Renderer Renderer { get; private set; }
+    public Window Window { get; private set; }
     
     internal static readonly List<IUpdatable> Updatables = new();
     public static int GlobalHoverCount { get; set; }
 
     public float DeltaTime { get; private set; }
-
-
+    
     // initialize the engine
     public bool Initialize()
     {
@@ -24,45 +24,11 @@ public class Engine : IDisposable
             return false;
         }
         
-        // create window
-        Window = SDL.CreateWindow("Vellum", 0, 0, Vellum.Platform.Window.DefaultOverlayFlags);
-        if (Window == IntPtr.Zero)
-        {
-            SDL.LogError(SDL.LogCategory.Application, $"SDL could not create window! SDL_Error: {SDL.GetError()}");
-            return false;
-        }
+        Window = new Window("Vellum Engine", 0, 0, WindowFlags.DefaultOverlay);
+        Renderer = new Renderer(Window);
         
-        // WORKING drivers, there are issues with direct3d drivers that i didnt manage to fix
-        string[] preferredDrivers = ["vulkan", "opengl", "opengles2"];
-    
-        // try each driver to get at least one working renderer
-        foreach (var driver in preferredDrivers)
-        {
-            Renderer = SDL.CreateRenderer(Window, driver);
-            if (Renderer != IntPtr.Zero)
-            {
-                SDL.Log($"Successfully initialized renderer using driver: {driver}");
-                break;
-            }
-        }
-
-        // fallback to software driver (CPU rendering)
-        if (Renderer == IntPtr.Zero)
-        {
-            SDL.LogWarn(SDL.LogCategory.Application, "Preferred hardware drivers failed. Falling back to software.");
-            Renderer = SDL.CreateRenderer(Window, "software");
-        }
-
-        if (Renderer == IntPtr.Zero)
-        {
-            SDL.LogError(SDL.LogCategory.Application, $"SDL could not create any renderer! SDL_Error: {SDL.GetError()}");
-            return false;
-        }
-        
-        // configure stuff
-        IntPtr hwnd = Vellum.Platform.Window.GetHwnd(Window);
-        Vellum.Platform.Window.ConfigureOverlay(Window, Renderer);
-        NativeMethods.DwmExtendFrameIntoClientArea(hwnd, new Rect(-1, -1, -1, -1)); // setting margins to -1 to force window to fill client area which triggers a "glass" like effect
+        Renderer.Clear(Color.Transparent);
+        Renderer.Present();
         
         _isInitialized = true;
         _isRunning = true;
@@ -86,7 +52,7 @@ public class Engine : IDisposable
         }
         
         // update input
-        Input.Input.UpdateStates(Window);
+        Input.Input.UpdateStates(Window.Handle);
         
         // update updatables, e.g., class events like OnClick
         for (int i = Updatables.Count - 1; i >= 0; i--)
@@ -94,46 +60,11 @@ public class Engine : IDisposable
             Updatables[i].Update(DeltaTime);
         }
         
-        Vellum.Platform.Window.SetClickThrough(Window, GlobalHoverCount == 0);
+        Window.SetClickThrough(GlobalHoverCount == 0);
         
-        // clear the screen
-        SDL.SetRenderDrawBlendMode(Renderer, SDL.BlendMode.None);
-        SDL.SetRenderDrawColor(Renderer, 0, 0, 0, 0);
-        SDL.RenderClear(Renderer);
-        
+        Renderer.Clear(Color.Transparent);
+
         return true;
-    }
-
-    // draw function for full rectangle
-    public void DrawFillRect(Rect rect, Color color)
-    {
-        SDL.SetRenderDrawBlendMode(Renderer, SDL.BlendMode.Blend);
-        SDL.SetRenderDrawColor(Renderer, color.R, color.G, color.B, color.A);
-        SDL.RenderFillRect(Renderer, rect);
-    }
-    
-    // draw function for full circle
-    public void DrawFillCircle(Circle circle, Color color)
-    {
-        SDL.SetRenderDrawBlendMode(Renderer, SDL.BlendMode.Blend);
-        SDL.SetRenderDrawColor(Renderer, color.R, color.G, color.B, color.A);
-
-        var cx = (int)circle.X;
-        var cy = (int)circle.Y;
-        var r = (int)circle.Radius;
-
-        // scan vertically and draw horizontal lines across the width of the circle
-        for (var y = -r; y <= r; y++)
-        {
-            var width = (int)MathF.Sqrt(r * r - y * y);
-            SDL.RenderLine(Renderer, cx - width, cy + y, cx + width, cy + y);
-        }
-    }
-
-    // send the buffer to the screen
-    public void Present()
-    {
-        SDL.RenderPresent(Renderer);
     }
     
     // calculating delta time (time between frames)
@@ -149,10 +80,8 @@ public class Engine : IDisposable
     // dispose of the engine resources
     public void Dispose()
     {
-        if (Renderer != IntPtr.Zero) SDL.DestroyRenderer(Renderer);
-        if (Window != IntPtr.Zero) SDL.DestroyWindow(Window);
-        
-        Vellum.Platform.Window.ClearActiveHandles();
+        if (Renderer.Handle != IntPtr.Zero) SDL.DestroyRenderer(Renderer.Handle);
+        if (Window.Handle != IntPtr.Zero) SDL.DestroyWindow(Window.Handle);
         
         SDL.Quit();
         GC.SuppressFinalize(this);

@@ -7,16 +7,16 @@ public class Interactive<TShape> : IUpdatable , IDisposable
     protected TShape Bounds { get; }
     protected bool IsHovered;
 
-    private readonly Func<TShape, float, float, bool>? _customHitTest;
+    private readonly Func<TShape, float, float, bool> _customHitTest;
     
     // actions
-    public Action? OnHoverEnter { get; set;}
-    public Action? OnHoverExit { get; set; }
-    public Action? OnPressed { get; set; }
-    public Action? OnReleased { get; set; }
-    public Action? OnClicked { get; set; }
+    public Action OnHoverEnter { get; set;}
+    public Action OnHoverExit { get; set; }
+    public Action OnPressed { get; set; }
+    public Action OnReleased { get; set; }
+    public Action OnClicked { get; set; }
     
-    public Interactive(TShape bounds, Func<TShape, float, float, bool>? customHitTest = null)
+    public Interactive(TShape bounds, Func<TShape, float, float, bool> customHitTest = null)
     {
         Bounds = bounds;
         _customHitTest = customHitTest;

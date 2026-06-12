@@ -34,10 +34,10 @@ public class Test
         while (engine.Update())
         {
             // draw
-            engine.DrawFillCircle(circle, colorState);
+            engine.Renderer.DrawFillCircle(circle, colorState);
             
             // send the buffer to the screen
-            engine.Present();
+            engine.Renderer.Present();
         }
     }
 }
