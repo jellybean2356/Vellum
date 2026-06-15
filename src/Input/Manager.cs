@@ -1,6 +1,6 @@
 ﻿namespace Vellum.Input;
 
-public static class Input
+public static class Manager
 {
     // private variables
     private static readonly MouseButton[] ButtonsToTrack = 

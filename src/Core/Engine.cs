@@ -58,7 +58,7 @@ public class Engine : IDisposable
         }
         
         // update input
-        Input.Input.UpdateStates(Window.Handle);
+        Input.Manager.UpdateStates(Window.Handle);
         Renderer.Clear(Color.Transparent);
         
         // update updatables, e.g., class events like OnClick

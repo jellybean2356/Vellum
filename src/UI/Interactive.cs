@@ -29,8 +29,8 @@ public class Interactive<TShape> : IUpdatable , IDisposable
     {
         // check if cursor is inside the rect
         var overInteractive = _customHitTest != null 
-            ? _customHitTest(Bounds, Input.Input.MouseX, Input.Input.MouseY) 
-            : Bounds.ContainsPoint(Input.Input.MouseX, Input.Input.MouseY);
+            ? _customHitTest(Bounds, Input.Manager.MouseX, Input.Manager.MouseY) 
+            : Bounds.ContainsPoint(Input.Manager.MouseX, Input.Manager.MouseY);
         
         // cursor enters rect area
         if (overInteractive && !IsHovered) 
@@ -51,19 +51,19 @@ public class Interactive<TShape> : IUpdatable , IDisposable
         if (overInteractive)
         {
             // on pressed
-            if (Input.Input.WasMousePressed(MouseButton.Left))
+            if (Input.Manager.WasMousePressed(MouseButton.Left))
             {
                 OnPressed?.Invoke();
             }
 
             // on released
-            if (Input.Input.WasMouseReleased(MouseButton.Left))
+            if (Input.Manager.WasMouseReleased(MouseButton.Left))
             {
                 OnReleased?.Invoke();
             }
 
             // on clicked
-            if (Input.Input.WasMouseClicked(MouseButton.Left))
+            if (Input.Manager.WasMouseClicked(MouseButton.Left))
             {
                 OnClicked?.Invoke();
             }
