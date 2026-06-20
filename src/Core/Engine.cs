@@ -6,13 +6,26 @@ public class Engine : IDisposable
     private bool _isInitialized;
     private bool _isRunning;
     
-    public Renderer Renderer { get; private set; }
-    public Window Window { get; private set; }
+    internal static readonly List<IUpdatable> Updatables = [];
+    internal static readonly List<Window> Windows = [];
     
-    internal static readonly List<IUpdatable> Updatables = new();
     public static int GlobalHoverCount { get; set; }
 
     public float DeltaTime { get; private set; }
+
+    private Renderer _renderer;
+    public Renderer Renderer
+    {
+        get => _renderer ?? (Window?.Renderer);
+        set => _renderer = value;
+    }
+
+    private Window _window;
+    public Window Window
+    {
+        get => _window ?? (Windows.Count > 0 ? Windows[0] : null);
+        set => _window = value;
+    }
     
     // initialize the engine
     public bool Initialize()
@@ -23,18 +36,6 @@ public class Engine : IDisposable
             SDL.LogError(SDL.LogCategory.System, $"SDL could not initialize! SDL_Error: {SDL.GetError()}");
             return false;
         }
-        
-        Window = Window.CreateOverlay("Vellum Engine");
-        Renderer = Renderer.Create(Window);
-
-        if (Window.Type == WindowType.Overlay)
-        {
-            WindowUtils.ConfigureOverlay(Window);
-            DwmExtendFrameIntoClientArea(Window.Hwnd, new Rect(-1, -1, -1, -1)); 
-        }
-        
-        Renderer.Clear(Color.Transparent);
-        Renderer.Present();
         
         _isInitialized = true;
         _isRunning = true;
@@ -58,16 +59,24 @@ public class Engine : IDisposable
         }
         
         // update input
-        Input.Manager.UpdateStates(Window.Handle);
-        Renderer.Clear(Color.Transparent);
+        Manager.UpdateStates(Window?.Handle ?? IntPtr.Zero);
+        
+        // update windows
+        foreach (var win in Windows)
+        {
+            win.Renderer?.Clear(win.Type == WindowType.Overlay ? Color.Transparent : Color.Black);
+        }
         
         // update updatables, e.g., class events like OnClick
-        for (int i = Updatables.Count - 1; i >= 0; i--)
+        for (var i = Updatables.Count - 1; i >= 0; i--)
         {
             Updatables[i].Update(DeltaTime);
         }
         
-        if (Window.Type == WindowType.Overlay) Window.SetClickThrough(GlobalHoverCount == 0);
+        foreach (var win in Windows.Where(win => win.Type == WindowType.Overlay))
+        {
+            win.SetClickThrough(win.HoverCount == 0);
+        }
 
         return true;
     }
@@ -85,8 +94,10 @@ public class Engine : IDisposable
     // dispose of the engine resources
     public void Dispose()
     {
-        if (Renderer.Handle != IntPtr.Zero) SDL.DestroyRenderer(Renderer.Handle);
-        if (Window.Handle != IntPtr.Zero) SDL.DestroyWindow(Window.Handle);
+        while (Windows.Count > 0)
+        {
+            Windows[^1].Dispose();
+        }
         
         SDL.Quit();
         GC.SuppressFinalize(this);

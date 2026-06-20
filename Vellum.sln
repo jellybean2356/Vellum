@@ -8,6 +8,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{827E0CD3-B72
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vellum", "src\Vellum.csproj", "{E6908A88-4407-44A2-BD11-2198D1E6E64A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sandbox2", "examples\Sandbox2\Sandbox2.csproj", "{78D5FBD8-B84A-4C90-9949-FD8F74B4151C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -42,6 +44,18 @@ Global
 		{E6908A88-4407-44A2-BD11-2198D1E6E64A}.Release|x64.Build.0 = Release|Any CPU
 		{E6908A88-4407-44A2-BD11-2198D1E6E64A}.Release|x86.ActiveCfg = Release|Any CPU
 		{E6908A88-4407-44A2-BD11-2198D1E6E64A}.Release|x86.Build.0 = Release|Any CPU
+		{78D5FBD8-B84A-4C90-9949-FD8F74B4151C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{78D5FBD8-B84A-4C90-9949-FD8F74B4151C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{78D5FBD8-B84A-4C90-9949-FD8F74B4151C}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{78D5FBD8-B84A-4C90-9949-FD8F74B4151C}.Debug|x64.Build.0 = Debug|Any CPU
+		{78D5FBD8-B84A-4C90-9949-FD8F74B4151C}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{78D5FBD8-B84A-4C90-9949-FD8F74B4151C}.Debug|x86.Build.0 = Debug|Any CPU
+		{78D5FBD8-B84A-4C90-9949-FD8F74B4151C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{78D5FBD8-B84A-4C90-9949-FD8F74B4151C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{78D5FBD8-B84A-4C90-9949-FD8F74B4151C}.Release|x64.ActiveCfg = Release|Any CPU
+		{78D5FBD8-B84A-4C90-9949-FD8F74B4151C}.Release|x64.Build.0 = Release|Any CPU
+		{78D5FBD8-B84A-4C90-9949-FD8F74B4151C}.Release|x86.ActiveCfg = Release|Any CPU
+		{78D5FBD8-B84A-4C90-9949-FD8F74B4151C}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -49,5 +63,6 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{B6F403BD-DEB1-49E2-A20D-A8282AA8CEE0} = {B36A84DF-456D-A817-6EDD-3EC3E7F6E11F}
 		{E6908A88-4407-44A2-BD11-2198D1E6E64A} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{78D5FBD8-B84A-4C90-9949-FD8F74B4151C} = {B36A84DF-456D-A817-6EDD-3EC3E7F6E11F}
 	EndGlobalSection
 EndGlobal

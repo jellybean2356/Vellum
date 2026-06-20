@@ -13,5 +13,5 @@ public enum WindowFlags
     NotFocusable = 1 << 6, 
 
     // preset for overlays
-    DefaultOverlay = Transparent | Borderless | Fullscreen | AlwaysOnTop | NotFocusable
+    DefaultOverlay = Transparent | Borderless | AlwaysOnTop | NotFocusable | Fullscreen
 }

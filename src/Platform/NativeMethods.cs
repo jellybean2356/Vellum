@@ -9,7 +9,12 @@ internal partial class NativeMethods
         internal const long WsExLayered = 0x00080000; // layered window
         internal const long WsExTransparent = 0x00000020; // transparent window
         internal const long WsExToolWindow = 0x00000080; // hides the window icon from toolbar
+        internal const long WsExNoRedirectionBitmap = 0x00400000;
+        internal const int WsExNoActivate = 0x08000000;
         internal const uint DwmwaExtendedFrameBounds = 9;
+        internal const uint LwaAlpha = 0x00000002;
+        internal const int DwmwaNcrenderingPolicy = 2;
+        internal const int DwmNcRenderingPolicyEnabled = 2;
         
         internal delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
 
@@ -49,6 +54,10 @@ internal partial class NativeMethods
         
         [LibraryImport("dwmapi.dll", EntryPoint = "DwmExtendFrameIntoClientArea")]
         private static partial int DwmExtendFrameIntoClientAreaNative(IntPtr hWnd, ref Margins pMarInset);
+        
+        [LibraryImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool SetLayeredWindowAttributes(IntPtr hwnd, uint crKey, byte bAlpha, uint dwFlags);
         
         [LibraryImport("user32.dll")]
         internal static partial IntPtr MonitorFromPoint(Win32Point pt, uint dwFlags);

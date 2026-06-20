@@ -17,6 +17,9 @@ public static class Manager
     // public variables
     public static float MouseX { get; private set; }
     public static float MouseY { get; private set; }
+    
+    public static float GlobalMouseX { get; private set; }
+    public static float GlobalMouseY { get; private set; }
 
     // KEYBOARD INPUT
     /// <summary> continuous state: true every frame the key is being held down </summary>
@@ -41,23 +44,33 @@ public static class Manager
     /// <summary> true on the frame, the mouse is let go. </summary>
     public static bool WasMouseClicked(MouseButton button) => WasClickedState[(int)button];
     
+    public static (float X, float Y) GetLocalMouseState(Window window)
+    {
+        if (window == null || window.Handle == IntPtr.Zero)
+            return (GlobalMouseX, GlobalMouseY);
+            
+        SDL.GetWindowPosition(window.Handle, out var wx, out var wy);
+        return (GlobalMouseX - wx, GlobalMouseY - wy);
+    }
+    
     // update states for mouse input
     internal static void UpdateStates(IntPtr window)
     {
-        // get mouse and window positions
         SDL.GetGlobalMouseState(out var gx, out var gy);
+        GlobalMouseX = gx;
+        GlobalMouseY = gy;
+
         SDL.GetWindowPosition(window, out var wx, out var wy);
 
-        // calculate the position relative to window
+        // Maintains native fallback behavior for active main window
         MouseX = gx - wx;
         MouseY = gy - wy;
 
-        // update mouse states
         foreach (var btn in ButtonsToTrack)
         {
             var index = (int)btn;
             PreviousMouseStates[index] = CurrentMouseStates[index];
-            CurrentMouseStates[index] = (NativeMethods.GetAsyncKeyState(index) & 0x8000) != 0;
+            CurrentMouseStates[index] = (GetAsyncKeyState(index) & 0x8000) != 0;
 
             var wasDown = PreviousMouseStates[index];
             var isDown = CurrentMouseStates[index];
@@ -65,7 +78,7 @@ public static class Manager
             WasClickedState[index] = false;
             WasReleasedState[index] = false;
 
-            if (isDown || !wasDown) continue;
+            if (!wasDown || isDown) continue;
             WasReleasedState[index] = true;
             WasClickedState[index] = true;
         }

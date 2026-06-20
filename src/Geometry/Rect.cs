@@ -6,6 +6,8 @@ public class Rect(float x, float y, float w, float h) : IShape
     public float Y { get; set; } = y;
     public float W { get; set; } = w;
     public float H { get; set; } = h;
+    
+    public Vellum.Platform.Window LastDrawnWindow { get; set; }
 
     // ===================================
     // CONVERT TO

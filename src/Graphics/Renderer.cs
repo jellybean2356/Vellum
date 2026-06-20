@@ -4,6 +4,7 @@ public class Renderer : IDisposable
 {
     internal IntPtr Handle{get; private set;}
     public bool IsValid => Handle != IntPtr.Zero;
+    public Window Window { get; internal set; }
 
     private Renderer(IntPtr handle)
     {
@@ -11,24 +12,28 @@ public class Renderer : IDisposable
     }
 
     // create renderer
-    public static Renderer Create(Window window)
+    public static Renderer Create(Window window, bool? gpuAccelerated = true)
     {
         var handle = IntPtr.Zero;
         // WORKING drivers, there are issues with direct3d drivers that i didnt manage to fix
         string[] preferredDrivers = ["vulkan", "opengl", "opengles2"];
     
         // try each driver to get at least one working renderer
-        foreach (var driver in preferredDrivers)
+
+        if (gpuAccelerated == true)
         {
-            handle = SDL.CreateRenderer(window.Handle, driver);
-            if (handle != IntPtr.Zero)
+            foreach (var driver in preferredDrivers)
             {
-                SDL.Log($"Renderer subsystem successfully initialized using driver: {driver}");
-                break;
+                handle = SDL.CreateRenderer(window.Handle, driver);
+                if (handle != IntPtr.Zero)
+                {
+                    SDL.Log($"Renderer subsystem successfully initialized using driver: {driver}");
+                    break;
+                }
             }
         }
 
-        // fallback to CPU-bound software rendering if hardware initialization fails
+        // fallback to CPU-bound software rendering if hardware initialization fails or if gpuAccelerated is false
         if (handle == IntPtr.Zero)
         {
             SDL.LogWarn(SDL.LogCategory.Application, "Preferred hardware drivers failed. Falling back to software renderer.");
@@ -40,7 +45,9 @@ public class Renderer : IDisposable
             SDL.LogError(SDL.LogCategory.Application, $"SDL could not create any renderer context! SDL_Error: {SDL.GetError()}");
         }
         
-        return new Renderer(handle);
+        var renderer = new Renderer(handle);
+        renderer.Window = window;
+        return renderer;
     }
 
     // clear the buffer
@@ -65,6 +72,7 @@ public class Renderer : IDisposable
     // draw function for full rectangle
     public void DrawFillRect(Rect rect, Color color)
     {
+        rect.LastDrawnWindow = this.Window;
         SDL.SetRenderDrawBlendMode(Handle, SDL.BlendMode.Blend);
         SDL.SetRenderDrawColor(Handle, color.R, color.G, color.B, color.A);
         SDL.RenderFillRect(Handle, rect);
@@ -73,6 +81,7 @@ public class Renderer : IDisposable
     // draw function for full circle
     public void DrawFillCircle(Circle circle, Color color)
     {
+        circle.LastDrawnWindow = this.Window;
         SDL.SetRenderDrawBlendMode(Handle, SDL.BlendMode.Blend);
         SDL.SetRenderDrawColor(Handle, color.R, color.G, color.B, color.A);
 

@@ -6,6 +6,7 @@ public class Interactive<TShape> : IUpdatable , IDisposable
     // private variables
     protected TShape Bounds { get; }
     protected bool IsHovered;
+    private Window _hoveredWindow;
 
     private readonly Func<TShape, float, float, bool> _customHitTest;
     
@@ -24,49 +25,78 @@ public class Interactive<TShape> : IUpdatable , IDisposable
         // add to engines updatables
         Engine.Updatables.Add(this);
     }
+    
+    protected (float X, float Y) GetLocalMouse()
+    {
+        var win = Bounds.LastDrawnWindow ?? (Engine.Windows.Count > 0 ? Engine.Windows[0] : null);
+        return Input.Manager.GetLocalMouseState(win);
+    }
 
     public virtual void Update(float deltaTime)
     {
-        // check if cursor is inside the rect
-        var overInteractive = _customHitTest != null 
-            ? _customHitTest(Bounds, Input.Manager.MouseX, Input.Manager.MouseY) 
-            : Bounds.ContainsPoint(Input.Manager.MouseX, Input.Manager.MouseY);
+        var win = Bounds.LastDrawnWindow;
+
+        // Smart fallback behavior for the very first frame before drawing has run
+        if (win == null && Engine.Windows.Count > 0)
+        {
+            SDL.GetGlobalMouseState(out var gx, out var gy);
+            foreach (var w in Engine.Windows)
+            {
+                SDL.GetWindowPosition(w.Handle, out var wx, out var wy);
+                SDL.GetWindowSize(w.Handle, out var ww, out var wh);
+                if (gx >= wx && gx <= wx + ww && gy >= wy && gy <= wy + wh)
+                {
+                    win = w;
+                    break;
+                }
+            }
+            win ??= Engine.Windows[0];
+        }
+
+        // Convert global mouse coordinates cleanly to the localized target window space
+        float localX, localY;
+        if (win != null)
+        {
+            SDL.GetGlobalMouseState(out var gx, out var gy);
+            SDL.GetWindowPosition(win.Handle, out var wx, out var wy);
+            localX = gx - wx;
+            localY = gy - wy;
+        }
+        else
+        {
+            localX = Manager.MouseX;
+            localY = Manager.MouseY;
+        }
+
+        // Perform spatial evaluation entirely localized within target window boundaries
+        bool overInteractive = _customHitTest != null 
+            ? _customHitTest(Bounds, localX, localY) 
+            : Bounds.ContainsPoint(localX, localY);
         
-        // cursor enters rect area
+        // Track hover metrics safely relative to their localized origin instance
         if (overInteractive && !IsHovered) 
         { 
             IsHovered = true; 
-            Engine.GlobalHoverCount++; 
+            Engine.GlobalHoverCount++;
+            _hoveredWindow = win;
+            if (_hoveredWindow != null) _hoveredWindow.HoverCount++;
             OnHoverEnter?.Invoke(); 
         }
         
-        // cursor leaves rect area
         if (!overInteractive && IsHovered) 
         { 
-            IsHovered = false; 
-            Engine.GlobalHoverCount--; 
+            IsHovered = false;
+            Engine.GlobalHoverCount--;
+            if (_hoveredWindow != null) _hoveredWindow.HoverCount--;
+            _hoveredWindow = null;
             OnHoverExit?.Invoke(); 
         }
         
         if (overInteractive)
         {
-            // on pressed
-            if (Input.Manager.WasMousePressed(MouseButton.Left))
-            {
-                OnPressed?.Invoke();
-            }
-
-            // on released
-            if (Input.Manager.WasMouseReleased(MouseButton.Left))
-            {
-                OnReleased?.Invoke();
-            }
-
-            // on clicked
-            if (Input.Manager.WasMouseClicked(MouseButton.Left))
-            {
-                OnClicked?.Invoke();
-            }
+            if (Manager.WasMousePressed(MouseButton.Left))   OnPressed?.Invoke();
+            if (Manager.WasMouseReleased(MouseButton.Left))  OnReleased?.Invoke();
+            if (Manager.WasMouseClicked(MouseButton.Left))   OnClicked?.Invoke();
         }
     }
     

@@ -9,36 +9,70 @@ public class Window : IDisposable
     public string Title => SDL.GetWindowTitle(Handle);
     public bool IsValid => Handle != IntPtr.Zero;
     public WindowFlags Flags { get; }
+    public int HoverCount { get; set; }
+
+    public Renderer Renderer
+    {
+        get;
+        set
+        {
+            if (field == value) return;
+            field?.Dispose();
+            field = value;
+        }
+    }
 
     private Window(IntPtr handle, WindowFlags flags, WindowType type)
     {
         Flags = flags;
         Handle = handle;
         Type = type;
+
+        Engine.Windows.Add(this);
     }
 
     // create window
     public static Window Create(string title, int width, int height, WindowFlags flags)
     {
+        if (Engine.Windows.Any(w => w.Type == WindowType.Overlay))
+        {
+            throw new InvalidOperationException(
+                "Engine Constraint Violation: Cannot create a Standard window because an Overlay window already exists. " +
+                "The engine cannot run standard windows and overlays simultaneously.");
+        }
+        
         SDL.WindowFlags sdlFlags = MapFlags(flags);
         IntPtr handle = SDL.CreateWindow(title, width, height, sdlFlags);
-        return new Window(handle, flags, WindowType.Standard);
+        var window = new Window(handle, flags, WindowType.Standard);
+        window.Renderer = Renderer.Create(window);
+        
+        return window;
     }
-
     public static Window CreateOverlay(string title, uint displayId = 0)
     {
+        if (Engine.Windows.Any(w => w.Type == WindowType.Standard))
+        {
+            throw new InvalidOperationException(
+                "Engine Constraint Violation: Cannot create an Overlay window because a Standard window already exists. " +
+                "The engine cannot run standard windows and overlays simultaneously.");
+        }
+        
         if (displayId == 0) displayId = WindowUtils.GetScreenDisplayIds()[0];
         SDL.GetDisplayBounds(displayId, out var rect);
-        
+    
         var flags = WindowFlags.DefaultOverlay;
         SDL.WindowFlags sdlFlags = MapFlags(flags);
         
-        IntPtr handle = SDL.CreateWindow(title, rect.W, rect.H, sdlFlags);
+        IntPtr handle = SDL.CreateWindow(title, rect.W, rect.H + 1, sdlFlags);
         var window = new Window(handle, flags, WindowType.Overlay);
-        
+        window.MakeLayered();
+        window.Renderer = Renderer.Create(window);
+    
         window.SetPosition(rect.X, rect.Y);
-        window.MakeLayered(); 
+        WindowUtils.ConfigureOverlay(window);
         
+        DwmExtendFrameIntoClientArea(window.Hwnd, new Rect(-1, -1, -1, -1)); 
+    
         return window;
     }
     
@@ -58,6 +92,7 @@ public class Window : IDisposable
         // set ExStyle to layered and transparent
         var exStyle = GetWindowLongPtr(Hwnd, GwlExstyle).ToInt64();
         _ = SetWindowLongPtr(Hwnd, GwlExstyle, new IntPtr(exStyle | WsExLayered | WsExTransparent | WsExToolWindow));
+        SetLayeredWindowAttributes(Hwnd, 0, 255, LwaAlpha);
         
         // force windows os to redraw the window
         SetWindowPos(Hwnd, IntPtr.Zero, 0, 0, 0, 0, 0x0027);
@@ -69,18 +104,19 @@ public class Window : IDisposable
     public void SetClickThrough(bool enabled)
     {
         if (enabled == _clickThrough) return;
-        
+    
         var exStyle = GetWindowLongPtr(Hwnd, GwlExstyle).ToInt64();
+        
         if (enabled)
             exStyle |= WsExTransparent;
         else
             exStyle &= ~WsExTransparent;
-        
+    
         _ = SetWindowLongPtr(Hwnd, GwlExstyle, new IntPtr(exStyle));
         
-        // force windows os to redraw the window
-        SetWindowPos(Hwnd, IntPtr.Zero, 0, 0, 0, 0, 0x0027);
-        
+        SetWindowPos(Hwnd, IntPtr.Zero, 0, 0, 0, 0, 0x0017);
+        DwmExtendFrameIntoClientArea(Hwnd, new Rect(-1, -1, -1, -1));
+    
         _clickThrough = enabled;
     }
     
@@ -88,6 +124,8 @@ public class Window : IDisposable
     {
         if (Handle != IntPtr.Zero)
         {
+            Engine.Windows.Remove(this);
+            Renderer?.Dispose();
             SDL.DestroyWindow(Handle);
             Handle = IntPtr.Zero;
         }
@@ -106,6 +144,7 @@ public class Window : IDisposable
         if (flags.HasFlag(WindowFlags.AlwaysOnTop))  sdlFlags |= SDL.WindowFlags.AlwaysOnTop;
         if (flags.HasFlag(WindowFlags.Transparent))  sdlFlags |= SDL.WindowFlags.Transparent;
         if (flags.HasFlag(WindowFlags.NotFocusable)) sdlFlags |= SDL.WindowFlags.NotFocusable;
+
         return sdlFlags;
     }
 }
