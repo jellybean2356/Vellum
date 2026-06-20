@@ -7,7 +7,12 @@ public static class Manager
     [
         MouseButton.Left, MouseButton.Right, MouseButton.Middle, MouseButton.X1, MouseButton.X2
     ];
+    private static readonly Key[] KeysToTrack = Enum.GetValues<Key>()
+        .Where(key => key != Key.None)
+        .ToArray();
 
+    private static readonly bool[] CurrentKeyStates = new bool[256];
+    private static readonly bool[] PreviousKeyStates = new bool[256];
     private static readonly bool[] CurrentMouseStates = new bool[7];
     private static readonly bool[] PreviousMouseStates = new bool[7];
     
@@ -23,26 +28,47 @@ public static class Manager
 
     // KEYBOARD INPUT
     /// <summary> continuous state: true every frame the key is being held down </summary>
-    public static bool IsKeyHeld(Key key) => (NativeMethods.GetAsyncKeyState((int)key) & 0x8000) != 0;
+    public static bool IsKeyHeld(Key key)
+    {
+        var index = (int)key;
+        return IsValidKeyIndex(index) && CurrentKeyStates[index];
+    }
 
     /// <summary> single-frame event: true only on the exact frame the key was first pushed down. </summary>
-    public static bool WasKeyPressed(Key key) => false; // Implement similarly if tracking previous keyboard frames later
+    public static bool WasKeyPressed(Key key)
+    {
+        var index = (int)key;
+        return IsValidKeyIndex(index) && CurrentKeyStates[index] && !PreviousKeyStates[index];
+    }
     
     // MOUSE INPUT
     /// <summary> true every frame the mouse button is actively held down </summary>
-    public static bool IsMouseHeld(MouseButton button) => CurrentMouseStates[(int)button];
+    public static bool IsMouseHeld(MouseButton button)
+    {
+        var index = (int)button;
+        return IsValidMouseIndex(index) && CurrentMouseStates[index];
+    }
 
     /// <summary> true only on the frame the mouse button transitioned from up to down </summary>
     public static bool WasMousePressed(MouseButton button) 
     {
-        return CurrentMouseStates[(int)button] && !PreviousMouseStates[(int)button];
+        var index = (int)button;
+        return IsValidMouseIndex(index) && CurrentMouseStates[index] && !PreviousMouseStates[index];
     }
 
     /// <summary> true on the frame, the mouse button is let go. </summary>
-    public static bool WasMouseReleased(MouseButton button) => WasReleasedState[(int)button];
+    public static bool WasMouseReleased(MouseButton button)
+    {
+        var index = (int)button;
+        return IsValidMouseIndex(index) && WasReleasedState[index];
+    }
 
     /// <summary> true on the frame, the mouse is let go. </summary>
-    public static bool WasMouseClicked(MouseButton button) => WasClickedState[(int)button];
+    public static bool WasMouseClicked(MouseButton button)
+    {
+        var index = (int)button;
+        return IsValidMouseIndex(index) && WasClickedState[index];
+    }
     
     public static (float X, float Y) GetLocalMouseState(Window window)
     {
@@ -66,6 +92,13 @@ public static class Manager
         MouseX = gx - wx;
         MouseY = gy - wy;
 
+        foreach (var key in KeysToTrack)
+        {
+            var index = (int)key;
+            PreviousKeyStates[index] = CurrentKeyStates[index];
+            CurrentKeyStates[index] = (GetAsyncKeyState(index) & 0x8000) != 0;
+        }
+
         foreach (var btn in ButtonsToTrack)
         {
             var index = (int)btn;
@@ -82,5 +115,15 @@ public static class Manager
             WasReleasedState[index] = true;
             WasClickedState[index] = true;
         }
+    }
+
+    private static bool IsValidKeyIndex(int index)
+    {
+        return index >= 0 && index < CurrentKeyStates.Length;
+    }
+
+    private static bool IsValidMouseIndex(int index)
+    {
+        return index >= 0 && index < CurrentMouseStates.Length;
     }
 }
