@@ -54,8 +54,9 @@ public class Engine : IDisposable
         _isRunning = true;
         _hasRun = true;
         
-        while (Update())
+        while (_isRunning)
         {
+            Update();
         }
     }
 
