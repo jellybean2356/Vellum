@@ -7,6 +7,8 @@ public class Engine : IDisposable
     private bool _isRunning;
     
     internal static readonly List<IUpdatable> Updatables = [];
+    internal static readonly List<IRenderable> Renderables = [];
+    
     internal static readonly List<Window> Windows = [];
     
     public static int GlobalHoverCount { get; set; }
@@ -61,12 +63,6 @@ public class Engine : IDisposable
         // update input
         Manager.UpdateStates(Window?.Handle ?? IntPtr.Zero);
         
-        // update windows
-        foreach (var win in Windows)
-        {
-            win.Renderer?.Clear(win.Type == WindowType.Overlay ? Color.Transparent : Color.Black);
-        }
-        
         // update updatables, e.g., class events like OnClick
         for (var i = Updatables.Count - 1; i >= 0; i--)
         {
@@ -76,6 +72,19 @@ public class Engine : IDisposable
         foreach (var win in Windows.Where(win => win.Type == WindowType.Overlay))
         {
             win.SetClickThrough(win.HoverCount == 0);
+        }
+        
+        // render shapes on screen
+        foreach (var win in Windows.Where(win => win.Renderer != null))
+        {
+            win.Renderer.Clear(win.Type == WindowType.Overlay ? Color.Transparent : Color.Black);
+
+            foreach (var renderable in Renderables.Where(renderable => renderable.AssociatedWindow == win))
+            {
+                renderable.Render(win.Renderer);
+            }
+            
+            win.Renderer.Present();
         }
 
         return true;

@@ -1,13 +1,28 @@
 ﻿namespace Vellum.Geometry;
 
-public class Rect(float x, float y, float w, float h) : IShape
+public class Rect : IShape, IRenderable
 {
-    public float X { get; set; } = x;
-    public float Y { get; set; } = y;
-    public float W { get; set; } = w;
-    public float H { get; set; } = h;
+    public float X { get; set; }
+    public float Y { get; set; }
+    public float W { get; set; }
+    public float H { get; set; }
     
-    public Vellum.Platform.Window LastDrawnWindow { get; set; }
+    public Window AssociatedWindow { get; set;}
+    public Window LastDrawnWindow { get; set; }
+    
+    public Color Color { get; set; }
+
+    public Rect(float x, float y, float w, float h, Color? color = null, Window associatedWindow = null)
+    {
+        X = x;
+        Y = y;
+        W = w;
+        H = h;
+        Color = color ?? Color.White;
+        AssociatedWindow = associatedWindow;
+        
+        Engine.Renderables.Add(this);
+    }
 
     // ===================================
     // CONVERT TO
@@ -22,7 +37,7 @@ public class Rect(float x, float y, float w, float h) : IShape
         new() { X = (int)r.X,  Y = (int)r.Y, W = (int)r.W, H = (int)r.H };
     
     // converting Win32Rect to Rect while keeping it internal (1st part of the logic, second in NativeMethods.cs)
-    internal NativeMethods.Win32Rect ToWin32Rect() =>
+    internal Win32Rect ToWin32Rect() =>
         new() { Left = (int)X, Top = (int)Y, Right = (int)(X + W), Bottom = (int)(Y + H) };
     
     // ===================================
@@ -38,7 +53,7 @@ public class Rect(float x, float y, float w, float h) : IShape
         new(sdl.X, sdl.Y, sdl.W, sdl.H);
     
     // converting Rect to Win32Rect while keeping it internal (1st part of the logic, second in NativeMethods.cs)
-    internal static Rect FromWin32Rect(NativeMethods.Win32Rect r) =>
+    internal static Rect FromWin32Rect(Win32Rect r) =>
         new(r.Left, r.Top, r.Right - r.Left, r.Bottom - r.Top);
 
     // check if a point is inside the rect (for basic UI interactions, used by Interactive<> generic wrapper)
@@ -46,5 +61,11 @@ public class Rect(float x, float y, float w, float h) : IShape
     {
         return pointX >= X && pointX <= X + W &&
                pointY >= Y && pointY <= Y + H;
+    }
+
+    void IRenderable.Render(Renderer renderer)
+    {
+        if (Color.A == 0 || AssociatedWindow == null) return;
+        renderer.DrawFillRect(this, Color);
     }
 }

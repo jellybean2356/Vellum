@@ -4,7 +4,7 @@ public class Interactive<TShape> : IUpdatable , IDisposable
     where TShape : class, IShape
 {
     // private variables
-    protected TShape Bounds { get; }
+    public TShape Shape { get; }
     protected bool IsHovered;
     private Window _hoveredWindow;
 
@@ -19,8 +19,9 @@ public class Interactive<TShape> : IUpdatable , IDisposable
     
     public Interactive(TShape bounds, Func<TShape, float, float, bool> customHitTest = null)
     {
-        Bounds = bounds;
+        Shape = bounds;
         _customHitTest = customHitTest;
+        
         
         // add to engines updatables
         Engine.Updatables.Add(this);
@@ -28,13 +29,13 @@ public class Interactive<TShape> : IUpdatable , IDisposable
     
     protected (float X, float Y) GetLocalMouse()
     {
-        var win = Bounds.LastDrawnWindow ?? (Engine.Windows.Count > 0 ? Engine.Windows[0] : null);
+        var win = Shape.LastDrawnWindow ?? (Engine.Windows.Count > 0 ? Engine.Windows[0] : null);
         return Input.Manager.GetLocalMouseState(win);
     }
 
     public virtual void Update(float deltaTime)
     {
-        var win = Bounds.LastDrawnWindow;
+        var win = Shape.LastDrawnWindow;
 
         // Smart fallback behavior for the very first frame before drawing has run
         if (win == null && Engine.Windows.Count > 0)
@@ -70,8 +71,8 @@ public class Interactive<TShape> : IUpdatable , IDisposable
 
         // Perform spatial evaluation entirely localized within target window boundaries
         bool overInteractive = _customHitTest != null 
-            ? _customHitTest(Bounds, localX, localY) 
-            : Bounds.ContainsPoint(localX, localY);
+            ? _customHitTest(Shape, localX, localY) 
+            : Shape.ContainsPoint(localX, localY);
         
         // Track hover metrics safely relative to their localized origin instance
         if (overInteractive && !IsHovered) 
@@ -100,7 +101,7 @@ public class Interactive<TShape> : IUpdatable , IDisposable
         }
     }
     
-    public static implicit operator TShape(Interactive<TShape> interactive) => interactive.Bounds;
+    public static implicit operator TShape(Interactive<TShape> interactive) => interactive.Shape;
 
     public void Dispose()
     {
