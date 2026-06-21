@@ -27,7 +27,6 @@ public class Renderer : IDisposable
                 handle = SDL.CreateRenderer(window.Handle, driver);
                 if (handle != IntPtr.Zero)
                 {
-                    SDL.Log($"Renderer subsystem successfully initialized using driver: {driver}");
                     break;
                 }
             }

@@ -57,11 +57,6 @@ public class Test
             rect2.Shape.Color = Color.Yellow;
         };
         
-        /*
-        while (engine.Update())
-        {
-            // not required as of this update
-        }
-        */
+        engine.Run();
     }
 }

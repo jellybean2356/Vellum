@@ -5,6 +5,7 @@ public class Engine : IDisposable
     // private variables
     private bool _isInitialized;
     private bool _isRunning;
+    private bool _hasRun;
     
     internal static readonly List<IUpdatable> Updatables = [];
     internal static readonly List<IRenderable> Renderables = [];
@@ -40,15 +41,32 @@ public class Engine : IDisposable
         }
         
         _isInitialized = true;
-        _isRunning = true;
         return true;
+    }
+
+    public void Run()
+    {
+        if (!_isInitialized)
+        {
+            throw new InvalidOperationException("Vellum Engine Error: Cannot execute Run() before Initialize() has completed successfully.");
+        }
+        
+        _isRunning = true;
+        _hasRun = true;
+        
+        while (Update())
+        {
+        }
     }
 
     // update loop
     public bool Update()
     {
         DeltaTime = GetDeltaTime();
-        if (!_isRunning) return false;
+        if (!_hasRun)
+        {
+            throw new InvalidOperationException("Vellum Engine Error: Run() was not called.");
+        }
 
         // poll events
         while (SDL.PollEvent(out var e))
@@ -103,6 +121,11 @@ public class Engine : IDisposable
     // dispose of the engine resources
     public void Dispose()
     {
+        if (_isInitialized && !_hasRun)
+        {
+            throw new InvalidOperationException("Vellum Engine Panic: Engine.Initialize() completed, but Engine.Run() was never invoked before the application terminated.");
+        }
+        
         while (Windows.Count > 0)
         {
             Windows[^1].Dispose();

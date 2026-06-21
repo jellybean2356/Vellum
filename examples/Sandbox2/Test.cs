@@ -19,28 +19,18 @@ public class Test
         using var engine = new Engine();
         if (!engine.Initialize()) return;
 
+        // create overlay
         using var overlay = Window.CreateOverlay("VellumEngine");
-        
-        var colorState = Color.Red;
 
-        var circle = new Draggable<Circle>(new Circle(100f, 100f, 50f))
+        // make a draggable circle
+        var circle = new Draggable<Circle>(new Circle(100f, 100f, 50f, Color.Red, overlay));
+        circle.OnClicked = async void () =>
         {
-            OnClicked = async void () =>
-            {
-                colorState = Color.Blue;
-                await Task.Delay(100);
-                colorState = Color.Red;
-            },
+            circle.Shape.Color = Color.Blue;
+            await Task.Delay(100);
+            circle.Shape.Color = Color.Red;
         };
-
-        // run the window loop
-        while (engine.Update())
-        {
-            // draw
-            overlay.Renderer.DrawFillCircle(circle, colorState);
-            
-            // send the buffer to the screen
-            overlay.Renderer.Present();
-        }
+        
+        engine.Run();
     }
 }
