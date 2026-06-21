@@ -13,6 +13,7 @@ public class Engine : IDisposable
     internal static readonly List<Window> Windows = [];
     
     public static int GlobalHoverCount { get; set; }
+    public Action OnUpdate { get; set; }
 
     public float DeltaTime { get; private set; }
 
@@ -81,6 +82,8 @@ public class Engine : IDisposable
         
         // update input
         Manager.UpdateStates(Window?.Handle ?? IntPtr.Zero);
+        
+        OnUpdate?.Invoke();
         
         // update updatables, e.g., class events like OnClick
         for (var i = Updatables.Count - 1; i >= 0; i--)

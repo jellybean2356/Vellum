@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Data;
+using System.Threading.Tasks;
 using Vellum.UI;
 using Vellum.Geometry;
 using Vellum.Graphics;
@@ -30,7 +31,13 @@ public class Test
             await Task.Delay(100);
             circle.Shape.Color = Color.Red;
         };
-        
+
+        engine.OnUpdate = Update;
         engine.Run();
+    }
+
+    private static void Update()
+    {
+        // update loop
     }
 }
