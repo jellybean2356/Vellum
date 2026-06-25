@@ -1,5 +1,4 @@
-﻿using System.Data;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Vellum.UI;
 using Vellum.Geometry;
 using Vellum.Graphics;
@@ -31,7 +30,9 @@ public class Test
             await Task.Delay(100);
             circle.Shape.Color = Color.Red;
         };
-
+        
+        var texture = new Draggable<Texture>(new Texture("assets/texture.png", 100, 100, overlay, 200, 200));
+        
         engine.OnUpdate = Update;
         engine.Run();
     }

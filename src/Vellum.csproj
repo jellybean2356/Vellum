@@ -10,5 +10,7 @@
     <ItemGroup>
       <PackageReference Include="SDL3-CS" Version="3.4.2" />
       <PackageReference Include="SDL3-CS.Native" Version="3.4.2" />
+      <PackageReference Include="SDL3-CS.Windows.Image" Version="3.4.4.4" />
+      <PackageReference Include="StbImageSharp" Version="2.30.15" />
     </ItemGroup>
 </Project>

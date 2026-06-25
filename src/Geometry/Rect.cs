@@ -21,7 +21,7 @@ public class Rect : IShape, IRenderable
         Color = color ?? Color.White;
         AssociatedWindow = associatedWindow;
         
-        Engine.Renderables.Add(this);
+        if (associatedWindow != null) Engine.Renderables.Add(this);
     }
 
     // ===================================

@@ -8,4 +8,8 @@
     <ItemGroup>
         <ProjectReference Include="..\..\src\Vellum.csproj" />
     </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="assets\" />
+    </ItemGroup>
 </Project>

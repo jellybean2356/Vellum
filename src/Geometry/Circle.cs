@@ -16,7 +16,7 @@ public class Circle : IShape, IRenderable
         X = x;
         Y = y;
         Radius = radius;
-        Color = color ?? Graphics.Color.White;
+        Color = color ?? Color.White;
         AssociatedWindow = associatedWindow;
         
         Engine.Renderables.Add(this);

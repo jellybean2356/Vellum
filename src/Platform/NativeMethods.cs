@@ -44,7 +44,7 @@ internal partial class NativeMethods
         
         [LibraryImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
-        internal static partial bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+        internal static partial bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int x, int y, int cx, int cy, uint uFlags);
         
         [LibraryImport("dwmapi.dll")]
         internal static partial int DwmGetWindowAttribute(IntPtr hwnd, uint dwAttribute, out int pvAttribute, int cbAttribute);
