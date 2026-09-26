@@ -90,8 +90,8 @@ public class Window : IDisposable
     public void MakeLayered()
     {
         // set ExStyle to layered and transparent
-        var exStyle = GetWindowLongPtr(Hwnd, GwlExstyle).ToInt64();
-        _ = SetWindowLongPtr(Hwnd, GwlExstyle, new IntPtr(exStyle | WsExLayered | WsExTransparent | WsExToolWindow));
+        var exStyle = GetWindowLongPtr(Hwnd, GwlExStyle).ToInt64();
+        _ = SetWindowLongPtr(Hwnd, GwlExStyle, new IntPtr(exStyle | WsExLayered | WsExTransparent | WsExToolWindow));
         SetLayeredWindowAttributes(Hwnd, 0, 255, LwaAlpha);
         
         // force windows os to redraw the window
@@ -105,14 +105,14 @@ public class Window : IDisposable
     {
         if (enabled == _clickThrough) return;
     
-        var exStyle = GetWindowLongPtr(Hwnd, GwlExstyle).ToInt64();
+        var exStyle = GetWindowLongPtr(Hwnd, GwlExStyle).ToInt64();
         
         if (enabled)
             exStyle |= WsExTransparent;
         else
             exStyle &= ~WsExTransparent;
     
-        _ = SetWindowLongPtr(Hwnd, GwlExstyle, new IntPtr(exStyle));
+        _ = SetWindowLongPtr(Hwnd, GwlExStyle, new IntPtr(exStyle));
         
         SetWindowPos(Hwnd, IntPtr.Zero, 0, 0, 0, 0, 0x0017);
         DwmExtendFrameIntoClientArea(Hwnd, new Rect(-1, -1, -1, -1));

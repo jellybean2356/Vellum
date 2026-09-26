@@ -40,7 +40,7 @@ public class WindowUtils
             if (titleLength == 0) return true;
 
             // skips windows that are excluded from toolbar
-            var exStyle = GetWindowLongPtr(hWnd, GwlExstyle).ToInt64();
+            var exStyle = GetWindowLongPtr(hWnd, GwlExStyle).ToInt64();
             if ((exStyle & WsExToolWindow) != 0) return true;
 
             // checking if window is on primary monitor
