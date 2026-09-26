@@ -52,6 +52,7 @@ Vellum/
 |   |   `-- Manager.cs       # global/local mouse state and keyboard/mouse queries
 |   |-- Platform/
 |   |   |-- NativeMethods.cs # Win32 and DWM P/Invoke declarations
+|   |   |-- Win32Window.cs   # Native Win32 window creation
 |   |   |-- Window.cs        # SDL window wrapper and overlay click-through behavior
 |   |   |-- WindowFlags.cs   # window flag enum and overlay preset
 |   |   |-- WindowType.cs    # Standard or Overlay
