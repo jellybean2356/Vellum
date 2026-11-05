@@ -11,6 +11,8 @@
 
 *Vellum is a little framework I’m building for native Windows tools, overlays, experiments, and interactive things that should stay lightweight.*
 
+*NOTE: this project did use a little bit ai for learning purposes, 90% of the code was still written by me and every single line is looked at by me. dont expect something crazy, its just my personal project where im trying to learn something new.*
+
 </div>
 
 ## what it does
