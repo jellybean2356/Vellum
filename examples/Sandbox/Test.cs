@@ -16,10 +16,10 @@ public class Test
         if (!engine.Initialize()) return;
 
         // create windows
-        using var window1 = Window.Create("Vellum Engine1", 500, 500, 0);
-        using var window2 = Window.Create("Vellum Engine2", 500, 500, 0);
-        using var window3 = Window.Create("Vellum Engine3", 500, 500, 0);
-        using var window4 = Window.Create("Vellum Engine4", 500, 500, 0);
+        using var window1 = Window.Create("Vellum Engine1", 500, 500);
+        using var window2 = Window.Create("Vellum Engine2", 500, 500);
+        using var window3 = Window.Create("Vellum Engine3", 500, 500);
+        using var window4 = Window.Create("Vellum Engine4", 500, 500);
 
         // --- window 1: draggable circle---
         var circle = new Draggable<Circle>(new Circle(100f, 100f, 50f, Color.Red, window1));

@@ -6,7 +6,7 @@ using Vellum.Core;
 using Vellum.Platform;
 
 /*
-    Demo test sandbox for vellum, i try stuff out here
+    Demo test sandbox for vellum, I try stuff out here
 */
 
 namespace Sandbox2;
@@ -19,8 +19,10 @@ public class Test
         using var engine = new Engine();
         if (!engine.Initialize()) return;
 
+        engine.ClampToDisplayRefreshRate = true;
+
         // create overlay
-        using var overlay = Window.CreateOverlay("VellumEngine");
+        using var overlay = Window.CreateOverlay("VellumEngine", WindowFlags.ForceTopmost);
 
         // make a draggable circle
         var circle = new Draggable<Circle>(new Circle(100f, 100f, 50f, Color.Red, overlay));
@@ -31,7 +33,10 @@ public class Test
             circle.Shape.Color = Color.Red;
         };
         
+        // make textures
         var texture = new Draggable<Texture>(new Texture("assets/texture.png", 100, 100, overlay, 200, 200));
+        var gif = new Draggable<Texture>(new Texture("assets/gif.gif", 100, 100, overlay));
+        var gif2 = new Draggable<Texture>(new Texture("assets/gif2.gif", 500, 200, overlay, animationSpeed: 1f));
         
         engine.OnUpdate = Update;
         engine.Run();

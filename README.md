@@ -1,151 +1,147 @@
 # Vellum
 
-Vellum is a lightweight C# / .NET 10 framework for building SDL3-powered desktop windows, transparent overlays, and simple interactive UI primitives on Windows.
+<div align="center">
 
-It wraps SDL3-CS rendering and window creation with a small engine loop, Win32/DWM helpers for overlay behavior, global input tracking, basic geometry, and shape-based interaction classes.
+### small native windows, transparent overlays, and simple 2D rendering for Windows
 
-## Current Capabilities
+<img src="https://img.shields.io/badge/platform-Windows-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows" />
+<img src="https://img.shields.io/badge/DOTNET-10-512BD4?style=for-the-badge" alt="DOTNET 10" />
+<img src="https://img.shields.io/badge/renderer-SDL3-1A1A1A?style=for-the-badge" alt="SDL3" />
+<img src="https://img.shields.io/badge/status-experimental-F59E0B?style=for-the-badge" alt="Experimental" />
 
-- **SDL3 engine loop**: initializes SDL video, polls quit events, tracks delta time, updates registered interactive objects, clears all windows, and disposes resources cleanly.
-- **Standard windows and overlays**: create normal SDL windows or fullscreen transparent overlays. The engine intentionally prevents mixing standard and overlay window modes in one run.
-- **Transparent click-through overlays**: overlay windows are layered, borderless, always on top, not focusable, and dynamically toggle click-through based on hover state.
-- **Multiple standard windows**: the sandbox demonstrates rendering and interaction across several independent SDL windows.
-- **Renderer fallback chain**: tries Vulkan, OpenGL, and OpenGLES2 before falling back to SDL software rendering.
-- **Shape rendering**: draw filled rectangles and circles with RGBA colors and alpha blending.
-- **Shape interaction**: wrap any `IShape` in `Interactive<TShape>` for hover, press, release, and click callbacks.
-- **Drag behavior**: `Draggable<TShape>` adds threshold-based dragging with optional horizontal or vertical axis locks.
-- **Win32 window utilities**: enumerate visible top-level windows, read titles and visual bounds, translate native window bounds into overlay-local coordinates, and draw debug outlines.
+*Vellum is a little framework I’m building for native Windows tools, overlays, experiments, and interactive things that should stay lightweight.*
 
-## Requirements
+</div>
+
+## what it does
+
+Vellum creates real Win32 windows and uses SDL3 for the rendering side. That gives it a useful middle ground: the windows behave like native Windows windows, while drawing stays straightforward inside the project.
+
+The current focus is:
+
+- standard resizable windows;
+- transparent, borderless overlays;
+- click-through overlays that become interactive when needed;
+- software-rendered rectangles, circles, textures, and animated GIFs;
+- simple mouse and keyboard polling;
+- small interaction helpers for hover, click, and dragging;
+- multiple windows managed by one engine loop.
+
+It is intentionally still a work in progress. The API is useful today, but it is not pretending to be a finished game engine or a universal overlay solution for exclusive-fullscreen applications.
+
+## a quick look
+
+```csharp
+using Vellum.Core;
+using Vellum.Geometry;
+using Vellum.Graphics;
+using Vellum.Input;
+using Vellum.Platform;
+using Vellum.UI;
+
+using var engine = new Engine
+{
+    MaxFrameRate = 0,                 // 0 = follow the display refresh rate
+    ClampToDisplayRefreshRate = true
+};
+
+if (!engine.Initialize()) return;
+
+using var window = Window.Create(
+    "Vellum",
+    640,
+    360,
+    WindowFlags.Resizable);
+
+using var circle = new Draggable<Circle>(
+    new Circle(120, 120, 48, Color.Cyan, window));
+
+circle.OnClicked = () => circle.Shape.Color = Color.Magenta;
+
+engine.OnUpdate = () =>
+{
+    if (Manager.WasKeyPressed(Key.Escape))
+        engine.Stop();
+};
+
+engine.Run();
+```
+
+For an overlay, replace the window creation line with:
+
+```csharp
+using var overlay = Window.CreateOverlay("Vellum overlay");
+```
+
+An overlay starts transparent and click-through. When an `Interactive<TShape>` or `Draggable<TShape>` object is hovered, Vellum temporarily allows the overlay to receive mouse input.
+
+## getting started
+
+### requirements
 
 - Windows
 - .NET 10 SDK
-- SDL3-CS packages, restored by `dotnet restore`
+- a project that references the Vellum project or compiled DLL
 
-The core library targets `net10.0`, enables nullable as disabled, allows unsafe blocks, and has `PublishAot` enabled. The current package references are:
+The library currently targets `net10.0` and uses SDL3-CS, SDL3-CS.Native, SkiaSharp, and StbImageSharp internally.
 
-- `SDL3-CS` 3.4.2
-- `SDL3-CS.Native` 3.4.2
+### build
 
-## Project Layout
-
-```text
-Vellum/
-|-- Vellum.sln
-|-- README.md
-|-- src/
-|   |-- Vellum.csproj
-|   |-- Core/
-|   |   |-- Engine.cs        # SDL initialization, frame update loop, window/updatable registry
-|   |   |-- Global.cs        # global usings shared by the library
-|   |   `-- IUpdatable.cs    # update contract used by interactive objects
-|   |-- Geometry/
-|   |   |-- IShape.cs        # shape contract with position, hit testing, and last drawn window
-|   |   |-- Rect.cs          # rectangle geometry and SDL/Win32 conversion helpers
-|   |   `-- Circle.cs        # circle geometry and hit testing
-|   |-- Graphics/
-|   |   |-- Color.cs         # RGBA color struct and common colors
-|   |   `-- Renderer.cs      # SDL renderer wrapper and draw helpers
-|   |-- Input/
-|   |   |-- Key.cs           # Win32 virtual-key enum
-|   |   |-- MouseButton.cs   # Win32 mouse-button enum
-|   |   `-- Manager.cs       # global/local mouse state and keyboard/mouse queries
-|   |-- Platform/
-|   |   |-- NativeMethods.cs # Win32 and DWM P/Invoke declarations
-|   |   |-- Win32Window.cs   # Native Win32 window creation
-|   |   |-- Window.cs        # SDL window wrapper and overlay click-through behavior
-|   |   |-- WindowFlags.cs   # window flag enum and overlay preset
-|   |   |-- WindowType.cs    # Standard or Overlay
-|   |   `-- WindowUtils.cs   # HWND helpers, bounds helpers, debug window outlines
-|   `-- UI/
-|       |-- Interactive.cs   # generic shape event wrapper
-|       |-- Draggable.cs     # draggable shape wrapper
-|       `-- _outdated/       # commented legacy rectangle-only interaction prototypes
-`-- examples/
-    |-- Sandbox/             # multiple standard windows with interactive shapes
-    `-- Sandbox2/            # fullscreen transparent overlay with a draggable circle
-```
-
-## Build
-
-```bash
+```powershell
 dotnet restore
-dotnet build
+dotnet build src\Vellum.csproj
 ```
 
-## Run The Examples
+### examples
 
-Run the standard multi-window demo:
-
-```bash
-dotnet run --project examples/Sandbox/Sandbox.csproj
+```powershell
+dotnet run --project examples\Sandbox\Sandbox.csproj
+dotnet run --project examples\Sandbox2\Sandbox2.csproj
 ```
 
-Run the transparent overlay demo:
+The first example shows normal windows and interaction. The second one demonstrates a fullscreen transparent overlay with a draggable shape and animated assets.
 
-```bash
-dotnet run --project examples/Sandbox2/Sandbox2.csproj
-```
+## the important ideas
 
-## Basic Standard Window Example
+### one engine loop
 
-```csharp
-using System.Threading.Tasks;
-using Vellum.Core;
-using Vellum.Geometry;
-using Vellum.Graphics;
-using Vellum.Platform;
-using Vellum.UI;
+Create one `Engine`, initialize it, create windows and renderables, then call `Run()`.
 
-using var engine = new Engine();
-if (!engine.Initialize()) return;
+`Engine.MaxFrameRate` controls the cap. With the default `0` value and `ClampToDisplayRefreshRate` enabled, Vellum follows the detected display refresh rate. A manual cap is still clamped to the monitor refresh rate unless that option is disabled.
 
-using var window = Window.Create("Vellum", 500, 500, WindowFlags.None);
+### shapes register themselves
 
-var color = Color.Red;
-var circle = new Draggable<Circle>(new Circle(100f, 100f, 50f))
-{
-    OnClicked = async void () =>
-    {
-        color = Color.Blue;
-        await Task.Delay(100);
-        color = Color.Red;
-    }
-};
+`Rect`, `Circle`, and `Texture` can be associated with a `Window`. Once associated, they are rendered by the engine automatically. `Renderer` is available when you want to draw directly yourself.
 
-while (engine.Update())
-{
-    window.Renderer.DrawFillCircle(circle, color);
-    window.Renderer.Present();
-}
-```
+## project layout
 
-## Basic Overlay Example
+The repository is split into a few focused areas rather than exposing its internal platform plumbing as part of the public API:
 
-```csharp
-using Vellum.Core;
-using Vellum.Geometry;
-using Vellum.Graphics;
-using Vellum.Platform;
-using Vellum.UI;
+- `src/Core` — engine lifecycle and update contracts
+- `src/Geometry` — shapes and hit testing
+- `src/Graphics` — colors, renderer, and textures
+- `src/Input` — keyboard and mouse state
+- `src/Platform` — public window types plus private native implementation
+- `src/UI` — interaction and dragging helpers
+- `examples` — small runnable projects
+- `docs` — public API documentation and usage notes
 
-using var engine = new Engine();
-if (!engine.Initialize()) return;
+## documentation
 
-using var overlay = Window.CreateOverlay("Vellum Overlay");
-var circle = new Draggable<Circle>(new Circle(100f, 100f, 50f));
+The public API reference is here:
 
-while (engine.Update())
-{
-    overlay.Renderer.DrawFillCircle(circle, Color.Red);
-    overlay.Renderer.Present();
-}
-```
+→ [Read the Vellum API docs](docs/API.md)
 
-When the mouse is not over an interactive shape, overlay windows stay click-through. When an interactive shape is hovered, Vellum disables click-through for that overlay so the shape can receive mouse input.
+The reference covers the classes, methods, properties, interfaces, and enums that are accessible when using the compiled DLL. Native implementation details such as `NativeMethods`, `Win32Window`, and the SDL bridge are intentionally not included.
 
-## Notes
+## current limitations
 
-- Keyboard and mouse button states use per-frame snapshots backed by Win32 `GetAsyncKeyState`, while mouse position is read from SDL global mouse state and converted into local window coordinates.
-- `DrawFillRect` and `DrawFillCircle` update each shape's `LastDrawnWindow`, which is how `Interactive<TShape>` resolves hit testing for shapes rendered into different windows.
-- The overlay helper currently defaults to the first display returned by SDL when no display id is provided.
+- Windows is the only supported platform right now.
+- Rendering currently uses SDL's software renderer.
+- Exclusive-fullscreen applications can prevent normal topmost overlays from appearing; Vellum does not inject into or hook game render backends.
+- Input is polled through Windows global state, so applications with unusual input handling may behave differently from ordinary desktop windows.
+- The API may change while the project is being cleaned up.
+
+## license
+
+There is no finalized license yet. Treat this repository as an experimental project while the API and distribution model are still being decided.
