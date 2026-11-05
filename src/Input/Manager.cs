@@ -72,25 +72,21 @@ public static class Manager
     
     public static (float X, float Y) GetLocalMouseState(Window window)
     {
-        if (window == null || window.Handle == IntPtr.Zero)
+        if (window == null || !window.IsValid)
             return (GlobalMouseX, GlobalMouseY);
             
-        SDL.GetWindowPosition(window.Handle, out var wx, out var wy);
-        return (GlobalMouseX - wx, GlobalMouseY - wy);
+        var point = new Win32Point { X = (int)GlobalMouseX, Y = (int)GlobalMouseY };
+        Win32Window.Check(ScreenToClient(window.Hwnd, ref point), "ScreenToClient (mouse)");
+        return (point.X, point.Y);
     }
     
     // update states for mouse input
-    internal static void UpdateStates(IntPtr window)
+    internal static void UpdateStates(Window window)
     {
-        SDL.GetGlobalMouseState(out var gx, out var gy);
-        GlobalMouseX = gx;
-        GlobalMouseY = gy;
-
-        SDL.GetWindowPosition(window, out var wx, out var wy);
-
-        // Maintains native fallback behavior for active main window
-        MouseX = gx - wx;
-        MouseY = gy - wy;
+        Win32Window.Check(GetCursorPos(out var point), "GetCursorPos");
+        GlobalMouseX = point.X;
+        GlobalMouseY = point.Y;
+        (MouseX, MouseY) = GetLocalMouseState(window);
 
         foreach (var key in KeysToTrack)
         {

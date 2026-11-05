@@ -1,5 +1,7 @@
 ﻿namespace Vellum.Platform;
 
+// NOTE: AI USED INSIDE NATIVE METHODS AND MOST OF THE STUFF RELATED TO WIN32 API
+
 internal static partial class NativeMethods
 {
     // ============================================================
@@ -44,12 +46,6 @@ internal static partial class NativeMethods
     internal const long WsExToolWindow = 0x00000080;
 
     /// <summary>
-    /// prevents windows from allocating a redirection surface
-    /// for the window
-    /// </summary>
-    internal const long WsExNoRedirectionBitmap = 0x00400000;
-
-    /// <summary>
     /// prevents the window from becoming activated/focused
     /// </summary>
     internal const long WsExNoActivate = 0x08000000;
@@ -83,6 +79,21 @@ internal static partial class NativeMethods
     /// sent when a window is being destroyed
     /// </summary>
     internal const uint WmDestroy = 0x0002;
+
+    /// <summary>
+    /// tells the threads message loop to stop
+    /// </summary>
+    internal const uint WmQuit = 0x0012;
+
+
+    // ============================================================
+    // MESSAGE QUEUE FLAGS
+    // ============================================================
+
+    /// <summary>
+    /// removes each retrieved message from the queue
+    /// </summary>
+    internal const uint PmRemove = 0x0001;
 
 
     // ============================================================
@@ -134,20 +145,6 @@ internal static partial class NativeMethods
     /// </summary>
     internal const uint DwmwaExtendedFrameBounds = 9;
 
-    internal const int DwmwaNcRenderingPolicy = 2;
-    internal const int DwmNcRenderingPolicyEnabled = 2;
-
-
-    // ============================================================
-    // LAYERED WINDOW CONSTANTS
-    // ============================================================
-
-    /// <summary>
-    /// SetLayeredWindowAttributes uses the alpha value
-    /// </summary>
-    internal const uint LwaAlpha = 0x00000002;
-
-
     // ============================================================
     // NATIVE CALLBACK DELEGATES
     // ============================================================
@@ -189,6 +186,21 @@ internal static partial class NativeMethods
     }
 
     /// <summary>
+    /// native Win32 MSG structure used by the message pump
+    /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct Win32Message
+    {
+        internal IntPtr hWnd;
+        internal uint message;
+        internal UIntPtr wParam;
+        internal IntPtr lParam;
+        internal uint time;
+        internal Win32Point pt;
+        internal uint lPrivate;
+    }
+
+    /// <summary>
     /// native Win32 RECT structure
     /// stores left/top/right/bottom instead of x/y/width/height
     /// </summary>
@@ -201,19 +213,6 @@ internal static partial class NativeMethods
         internal int Bottom;
     }
 
-    /// <summary>
-    /// native DWM MARGINS structure
-    /// </summary>
-    [StructLayout(LayoutKind.Sequential)]
-    internal struct Margins
-    {
-        internal int Left;
-        internal int Right;
-        internal int Top;
-        internal int Bottom;
-    }
-
-    /// <summary>
     /// native WNDCLASSEXW structure used when registering
     /// vellums Win32 window class
     /// </summary>
@@ -311,6 +310,42 @@ internal static partial class NativeMethods
 
 
     // ============================================================
+    // USER32 - MESSAGE LOOP
+    // ============================================================
+
+    /// <summary>
+    /// retrieves a queued message without waiting for one to arrive
+    /// false means the queue has no matching message, not an error
+    /// </summary>
+    [LibraryImport("user32.dll", EntryPoint = "PeekMessageW")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static partial bool PeekMessage(
+        out Win32Message message,
+        IntPtr hWnd,
+        uint minMessage,
+        uint maxMessage,
+        uint removeMessage
+    );
+
+    /// <summary>
+    /// translates virtual-key messages into character messages
+    /// </summary>
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static partial bool TranslateMessage(
+        in Win32Message message
+    );
+
+    /// <summary>
+    /// sends a message to the target windows procedure
+    /// </summary>
+    [LibraryImport("user32.dll", EntryPoint = "DispatchMessageW")]
+    internal static partial IntPtr DispatchMessage(
+        in Win32Message message
+    );
+
+
+    // ============================================================
     // USER32 - WINDOW LIFETIME / VISIBILITY
     // ============================================================
 
@@ -350,7 +385,7 @@ internal static partial class NativeMethods
 
     [LibraryImport(
         "user32.dll",
-        EntryPoint = "GetWindowLongPtrW")]
+        EntryPoint = "GetWindowLongPtrW", SetLastError = true)]
     internal static partial IntPtr GetWindowLongPtr(
         IntPtr hWnd,
         int index
@@ -358,7 +393,7 @@ internal static partial class NativeMethods
 
     [LibraryImport(
         "user32.dll",
-        EntryPoint = "SetWindowLongPtrW")]
+        EntryPoint = "SetWindowLongPtrW", SetLastError = true)]
     internal static partial IntPtr SetWindowLongPtr(
         IntPtr hWnd,
         int index,
@@ -406,7 +441,7 @@ internal static partial class NativeMethods
     // USER32 - WINDOW POSITION
     // ============================================================
 
-    [LibraryImport("user32.dll")]
+    [LibraryImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     internal static partial bool SetWindowPos(
         IntPtr hWnd,
@@ -476,20 +511,6 @@ internal static partial class NativeMethods
 
 
     // ============================================================
-    // USER32 - LAYERED WINDOWS
-    // ============================================================
-
-    [LibraryImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    internal static partial bool SetLayeredWindowAttributes(
-        IntPtr hWnd,
-        uint colorKey,
-        byte alpha,
-        uint flags
-    );
-
-
-    // ============================================================
     // DWMAPI
     // ============================================================
 
@@ -508,15 +529,6 @@ internal static partial class NativeMethods
         out Win32Rect rect,
         int valueSize
     );
-
-    [LibraryImport(
-        "dwmapi.dll",
-        EntryPoint = "DwmExtendFrameIntoClientArea")]
-    private static partial int DwmExtendFrameIntoClientAreaNative(
-        IntPtr hWnd,
-        ref Margins margins
-    );
-
 
     // ============================================================
     // VELLUM HELPERS
@@ -564,25 +576,4 @@ internal static partial class NativeMethods
         return result;
     }
 
-    /// <summary>
-    /// vellum friendly wrapper around DwmExtendFrameIntoClientArea
-    /// </summary>
-    internal static int DwmExtendFrameIntoClientArea(
-        IntPtr hWnd,
-        Rect rect
-    )
-    {
-        var margins = new Margins
-        {
-            Left = (int)rect.X,
-            Right = (int)rect.W,
-            Top = (int)rect.Y,
-            Bottom = (int)rect.H
-        };
-
-        return DwmExtendFrameIntoClientAreaNative(
-            hWnd,
-            ref margins
-        );
-    }
 }

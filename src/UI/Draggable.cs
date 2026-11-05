@@ -20,12 +20,13 @@ public sealed class Draggable<TShape>(TShape bounds, Func<TShape, float, float, 
     public override void Update(float deltaTime)
     {
         base.Update(deltaTime);
+        var (mouseX, mouseY) = GetLocalMouse();
         
         if (_isDragging)
         {
             // X or Y axis locking + drag application
-            if (!LockHorizontal) Shape.X = Manager.MouseX - _grabOffsetX;
-            if (!LockVertical) Shape.Y = Manager.MouseY - _grabOffsetY;
+            if (!LockHorizontal) Shape.X = mouseX - _grabOffsetX;
+            if (!LockVertical) Shape.Y = mouseY - _grabOffsetY;
             
             // when mouse releases, stop dragging
             if (Manager.WasMouseReleased(MouseButton.Left))
@@ -36,8 +37,8 @@ public sealed class Draggable<TShape>(TShape bounds, Func<TShape, float, float, 
         else if (_isHolding) 
         {
             // drag calculation
-            var dx = Manager.MouseX - _startMouseX;
-            var dy = Manager.MouseY - _startMouseY;
+            var dx = mouseX - _startMouseX;
+            var dy = mouseY - _startMouseY;
             var distanceSq = (dx * dx) + (dy * dy);
             
             if (distanceSq >= DragThreshold * DragThreshold)
@@ -54,16 +55,14 @@ public sealed class Draggable<TShape>(TShape bounds, Func<TShape, float, float, 
         else
         {
             // when mouse is over the bounds and pressed, start dragging
-            if (IsHovered && Manager.WasMousePressed(MouseButton.Left))
-            {
-                _isHolding = true;
+            if (!IsHovered || !Manager.WasMousePressed(MouseButton.Left)) return;
+            _isHolding = true;
                 
-                _startMouseX = Manager.MouseX;
-                _startMouseY = Manager.MouseY;
+            _startMouseX = mouseX;
+            _startMouseY = mouseY;
                 
-                _grabOffsetX = Manager.MouseX - Shape.X;
-                _grabOffsetY = Manager.MouseY - Shape.Y;
-            }
+            _grabOffsetX = mouseX - Shape.X;
+            _grabOffsetY = mouseY - Shape.Y;
         }
     }
 }

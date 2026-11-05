@@ -1,23 +1,60 @@
 ﻿namespace Vellum.Platform;
 
-public class WindowUtils
+public static class WindowUtils
 {
     private static List<IntPtr> _openWindows = [];
     private static List<IntPtr> _openWindowsOld = [];
     private static List<IntPtr> _windowRects = [];
+    private static readonly Dictionary<IntPtr, uint> DisplayIds = [];
+    private static uint _nextDisplayId = 1;
     
-    // helper method to get hwnd
+    // helper method to get window hwnd
     public static IntPtr GetHwnd(IntPtr window)
     {
-        var props = SDL.GetWindowProperties(window);
-        return SDL.GetPointerProperty(props, SDL.Props.WindowWin32HWNDPointer, IntPtr.Zero);
+        return SdlWindowBridge.GetHwnd(window);
     }
 
-    // helper function to get screen display ids
+    // Vellum IDs for Win32 monitors, NOT SDL DISPLAY IDS
     public static uint[] GetScreenDisplayIds()
     {
-        var displays = SDL.GetDisplays(out _);
-        return displays;
+        var monitors = GetMonitorHandles();
+        foreach (var removed in DisplayIds.Keys.Where(m => !monitors.Contains(m)).ToArray())
+            DisplayIds.Remove(removed);
+        foreach (var monitor in monitors)
+            if (!DisplayIds.ContainsKey(monitor)) DisplayIds.Add(monitor, checked(_nextDisplayId++));
+        return [.. monitors.Select(m => DisplayIds[m])];
+    }
+
+    // native window handles
+    public static IntPtr[] GetMonitorHandles()
+    {
+        var monitors = new List<IntPtr>();
+        MonitorEnumProc callback = (monitor, _, ref _, _) =>
+        {
+            monitors.Add(monitor);
+            return true;
+        };
+        Win32Window.Check(EnumDisplayMonitors(IntPtr.Zero, IntPtr.Zero, callback, IntPtr.Zero), "EnumDisplayMonitors");
+        GC.KeepAlive(callback);
+        return [.. monitors];
+    }
+
+    // zero selects the primary monitor, explicit IDs come from GetScreenDisplayIds()
+    internal static IntPtr GetNativeMonitor(uint displayId = 0)
+    {
+        if (displayId == 0)
+            return MonitorFromPoint(new Win32Point(), 1);
+        GetScreenDisplayIds(); // refresh disconnected displays before resolving the ID
+        foreach (var display in DisplayIds.Where(display => display.Value == displayId)) return display.Key;
+        throw new ArgumentException($"No connected Windows monitor for Vellum display ID {displayId}.", nameof(displayId));
+    }
+
+    // obtain bounds of the monitor in WH
+    internal static Win32Rect GetNativeMonitorBounds(IntPtr monitor)
+    {
+        var info = new MonitorInfo { Size = (uint)Marshal.SizeOf<MonitorInfo>() };
+        Win32Window.Check(GetMonitorInfo(monitor, ref info), "GetMonitorInfoW");
+        return info.Monitor;
     }
 
     // helper function to get all windows
@@ -57,11 +94,11 @@ public class WindowUtils
             }
 
             // skips windows that are children of other windows
-            IntPtr owner = GetWindow(hWnd, GwOwner);
+            var owner = GetWindow(hWnd, GwOwner);
             if (owner != IntPtr.Zero && IsWindowVisible(owner)) return true;
 
             // skips windows that are cloaked (windows flagged as visible even though they are invisible)
-            int hr = DwmGetWindowAttribute(hWnd, DwmwaIsCloaked, out int cloaked, sizeof(int));
+            var hr = DwmGetWindowAttribute(hWnd, DwmwaIsCloaked, out int cloaked, sizeof(int));
             if (hr == 0 && cloaked != 0) return true;
 
             visibleWindows.Add(hWnd);
@@ -78,8 +115,8 @@ public class WindowUtils
         if (length <= 0) return string.Empty;
         
         var buffer = new char[length + 1];
-        GetWindowText(hWnd, buffer, buffer.Length);
-        return new string(buffer);
+        var copied = GetWindowText(hWnd, buffer, buffer.Length);
+        return new string(buffer, 0, copied);
 
     }
 
@@ -99,10 +136,11 @@ public class WindowUtils
     public static Rect GetLocalWindowsBounds(IntPtr targetHwnd, IntPtr overlayHwnd)
     {
         var targetRect = GetVisualWindowBounds(targetHwnd);
-        var overlyRect = GetVisualWindowBounds(overlayHwnd);
+        var origin = new Win32Point();
+        Win32Window.Check(ClientToScreen(overlayHwnd, ref origin), "ClientToScreen (overlay bounds)");
 
-        float localX = targetRect.X - overlyRect.X;
-        float localY = targetRect.Y - overlyRect.Y;
+        var localX = targetRect.X - origin.X;
+        var localY = targetRect.Y - origin.Y;
 
         return new Rect(localX, localY, targetRect.W, targetRect.H);
     }
@@ -135,9 +173,8 @@ public class WindowUtils
         _windowRects.RemoveAll(hwnd => !_openWindows.Contains(hwnd));
         
         SDL.SetRenderDrawColor(renderer.Handle, 255, 0, 0, 255);
-        foreach (var hwnd in _windowRects)
+        foreach (var drawBox in _windowRects.Select(hwnd => WindowUtils.GetLocalWindowsBounds(hwnd, window.Hwnd)))
         {
-            var drawBox = WindowUtils.GetLocalWindowsBounds(hwnd, window.Handle);
             SDL.RenderRect(renderer.Handle, drawBox);
         }
     }

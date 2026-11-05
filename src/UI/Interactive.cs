@@ -1,12 +1,16 @@
 ﻿namespace Vellum.UI;
 
-public class Interactive<TShape> : IUpdatable , IDisposable
+public class Interactive<TShape> : IUpdatable, IDisposable, IMouseCapture
     where TShape : class, IShape
 {
     // private variables
     public TShape Shape { get; }
     protected bool IsHovered;
     private Window _hoveredWindow;
+    private Window _capturedWindow;
+
+    bool IMouseCapture.IsMouseCaptured => _capturedWindow != null;
+    Window IMouseCapture.CapturedWindow => _capturedWindow;
 
     private readonly Func<TShape, float, float, bool> _customHitTest;
     
@@ -22,46 +26,52 @@ public class Interactive<TShape> : IUpdatable , IDisposable
         Shape = bounds;
         _customHitTest = customHitTest;
         
+        if (bounds is IUpdatable updatableShape)
+        {
+            Engine.Updatables.Remove(updatableShape);
+        }
         
+
         // add to engines updatables
         Engine.Updatables.Add(this);
     }
     
+    // get local mouse state
     protected (float X, float Y) GetLocalMouse()
     {
-        var win = Shape.LastDrawnWindow ?? (Engine.Windows.Count > 0 ? Engine.Windows[0] : null);
-        return Input.Manager.GetLocalMouseState(win);
+        return Manager.GetLocalMouseState(Shape.LastDrawnWindow ?? (Engine.Windows.Count > 0 ? Engine.Windows[0] : null));
     }
 
+    // update each frame
     public virtual void Update(float deltaTime)
     {
-        var win = Shape.LastDrawnWindow;
+        if (Shape.LastDrawnWindow != null && _hoveredWindow == null)
+        {
+            _hoveredWindow = Shape.LastDrawnWindow;
+        }
 
-        // Smart fallback behavior for the very first frame before drawing has run
+        var win = Shape.LastDrawnWindow ?? _hoveredWindow;
+
+        // fallback behavior for the very first frame before drawing has run
         if (win == null && Engine.Windows.Count > 0)
         {
-            SDL.GetGlobalMouseState(out var gx, out var gy);
-            foreach (var w in Engine.Windows)
+            foreach (var w in Engine.Windows.Where(w => w.IsValid && IsWindowVisible(w.Hwnd)))
             {
-                SDL.GetWindowPosition(w.Handle, out var wx, out var wy);
-                SDL.GetWindowSize(w.Handle, out var ww, out var wh);
-                if (gx >= wx && gx <= wx + ww && gy >= wy && gy <= wy + wh)
-                {
-                    win = w;
-                    break;
-                }
+                var (x, y) = Manager.GetLocalMouseState(w);
+                Win32Window.Check(GetClientRect(w.Hwnd, out var client), "GetClientRect (hit testing)");
+                if (!(x >= 0) || !(x < client.Right) || !(y >= 0) || !(y < client.Bottom)) continue;
+                win = w;
+                break;
             }
+
             win ??= Engine.Windows[0];
         }
 
-        // Convert global mouse coordinates cleanly to the localized target window space
+        // convert global mouse coordinates to the local target window space
         float localX, localY;
         if (win != null)
         {
-            SDL.GetGlobalMouseState(out var gx, out var gy);
-            SDL.GetWindowPosition(win.Handle, out var wx, out var wy);
-            localX = gx - wx;
-            localY = gy - wy;
+            (localX, localY) = Manager.GetLocalMouseState(win);
         }
         else
         {
@@ -69,35 +79,58 @@ public class Interactive<TShape> : IUpdatable , IDisposable
             localY = Manager.MouseY;
         }
 
-        // Perform spatial evaluation entirely localized within target window boundaries
-        bool overInteractive = _customHitTest != null 
-            ? _customHitTest(Shape, localX, localY) 
-            : Shape.ContainsPoint(localX, localY);
-        
-        // Track hover metrics safely relative to their localized origin instance
-        if (overInteractive && !IsHovered) 
-        { 
-            IsHovered = true; 
-            Engine.GlobalHoverCount++;
-            _hoveredWindow = win;
-            if (_hoveredWindow != null) _hoveredWindow.HoverCount++;
-            OnHoverEnter?.Invoke(); 
+        // is cursor over an interactive element in local space
+        var overInteractive = (win == null || win.IsValid && IsWindowVisible(win.Hwnd)) &&
+                              (_customHitTest?.Invoke(Shape, localX, localY) ?? Shape.ContainsPoint(localX, localY));
+
+        var wasMousePressed = Manager.WasMousePressed(MouseButton.Left);
+        var wasMouseReleased = Manager.WasMouseReleased(MouseButton.Left);
+
+        switch (overInteractive)
+        {
+            // hover tracking
+            case true when !IsHovered:
+            {
+                IsHovered = true; 
+                Engine.GlobalHoverCount++;
+                _hoveredWindow = win;
+                if (_hoveredWindow != null) _hoveredWindow.HoverCount++;
+                OnHoverEnter?.Invoke();
+                break;
+            }
+            case false when IsHovered:
+            {
+                IsHovered = false;
+                Engine.GlobalHoverCount--;
+                if (_hoveredWindow != null) _hoveredWindow.HoverCount--;
+                _hoveredWindow = null;
+                OnHoverExit?.Invoke();
+                break;
+            }
         }
         
-        if (!overInteractive && IsHovered) 
-        { 
-            IsHovered = false;
-            Engine.GlobalHoverCount--;
-            if (_hoveredWindow != null) _hoveredWindow.HoverCount--;
-            _hoveredWindow = null;
-            OnHoverExit?.Invoke(); 
-        }
-        
+        // mouse input tracking
         if (overInteractive)
         {
-            if (Manager.WasMousePressed(MouseButton.Left))   OnPressed?.Invoke();
-            if (Manager.WasMouseReleased(MouseButton.Left))  OnReleased?.Invoke();
-            if (Manager.WasMouseClicked(MouseButton.Left))   OnClicked?.Invoke();
+            if (wasMousePressed && _capturedWindow == null)
+            {
+                _capturedWindow = win;
+                OnPressed?.Invoke();
+            }
+
+            if (wasMouseReleased)
+                OnClicked?.Invoke();
+        }
+
+        if (wasMouseReleased && _capturedWindow != null)
+        {
+            OnReleased?.Invoke();
+            _capturedWindow = null;
+        }
+
+        if (Shape is IUpdatable updatableShape)
+        {
+            updatableShape.Update(deltaTime);
         }
     }
     
@@ -106,6 +139,14 @@ public class Interactive<TShape> : IUpdatable , IDisposable
     public void Dispose()
     {
         Engine.Updatables.Remove(this);
+        _capturedWindow = null;
+        if (IsHovered)
+        {
+            IsHovered = false;
+            Engine.GlobalHoverCount = Math.Max(0, Engine.GlobalHoverCount - 1);
+            if (_hoveredWindow != null) _hoveredWindow.HoverCount = Math.Max(0, _hoveredWindow.HoverCount - 1);
+            _hoveredWindow = null;
+        }
         
         OnHoverEnter = null;
         OnHoverExit = null;
