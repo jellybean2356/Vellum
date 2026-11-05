@@ -20,6 +20,8 @@ public sealed class Draggable<TShape>(TShape bounds, Func<TShape, float, float, 
     public override void Update(float deltaTime)
     {
         base.Update(deltaTime);
+        if (!HasInputPriority) return;
+
         var (mouseX, mouseY) = GetLocalMouse();
         
         if (_isDragging)

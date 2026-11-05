@@ -9,6 +9,7 @@ public class Engine : IDisposable
     private bool _hadWindows;
     private bool _drawingFrame;
     private int _mainThreadId;
+    private static long _interactionSequence;
     
     internal static readonly List<IUpdatable> Updatables = [];
     internal static readonly List<IRenderable> Renderables = [];
@@ -166,6 +167,8 @@ public class Engine : IDisposable
         
         OnUpdate?.Invoke();
         if (!_isRunning) return false;
+
+        PrepareInteractiveInput();
         
         // update updatables, e.g., class events like OnClick
         for (var i = Updatables.Count - 1; i >= 0; i--)
@@ -209,8 +212,24 @@ public class Engine : IDisposable
         {
             window.Renderer.Clear(window.Type == WindowType.Overlay || window.UsesLayeredPresentation
                 ? Color.Transparent : Color.Black);
-            foreach (var renderable in Renderables.Where(r => r.AssociatedWindow == window))
-                renderable.Render(window.Renderer);
+            var interactiveTargets = Updatables.OfType<IInteractiveTarget>().ToArray();
+            var renderables = Renderables
+                .Where(renderable => renderable.AssociatedWindow == window)
+                .Select((renderable, index) => new
+                {
+                    Renderable = renderable,
+                    Index = index,
+                    Target = interactiveTargets.FirstOrDefault(target =>
+                        ReferenceEquals(target.Shape, renderable))
+                })
+                .OrderBy(item => item.Target?.ZPriority ?? 0)
+                .ThenBy(item => item.Target is { ZPriority: null }
+                    ? item.Target.InteractionOrder
+                    : 0)
+                .ThenBy(item => item.Index);
+
+            foreach (var item in renderables)
+                item.Renderable.Render(window.Renderer);
             window.Renderer.Present();
         }
         finally
@@ -233,6 +252,46 @@ public class Engine : IDisposable
         return Updatables.Any(updatable =>
             updatable is IMouseCapture { IsMouseCaptured: true } capture && capture.CapturedWindow == window);
     }
+
+    internal static void MarkInteraction(IInteractiveTarget target)
+    {
+        target.InteractionOrder = ++_interactionSequence;
+    }
+
+    private static void PrepareInteractiveInput()
+    {
+        var targets = Updatables.OfType<IInteractiveTarget>().ToArray();
+        foreach (var target in targets)
+            target.SetInputState(false, false);
+
+        var pointerOverTargets = targets
+            .Where(target => target.IsPointerOver())
+            .ToHashSet();
+
+        var capturedTarget = targets
+            .Where(target => target.IsMouseCaptured)
+            .OrderByDescending(GetInputZPriority)
+            .ThenByDescending(GetInputRecency)
+            .ThenByDescending(target => Windows.IndexOf(target.InteractionWindow))
+            .FirstOrDefault();
+
+        var inputTarget = capturedTarget ?? pointerOverTargets
+            .OrderByDescending(GetInputZPriority)
+            .ThenByDescending(GetInputRecency)
+            .ThenByDescending(target => Windows.IndexOf(target.InteractionWindow))
+            .FirstOrDefault();
+
+        foreach (var target in targets)
+        {
+            var isInputTarget = ReferenceEquals(target, inputTarget);
+            target.SetInputState(isInputTarget, isInputTarget && pointerOverTargets.Contains(target));
+        }
+    }
+
+    private static int GetInputZPriority(IInteractiveTarget target) => target.ZPriority ?? 0;
+
+    private static long GetInputRecency(IInteractiveTarget target) =>
+        target.ZPriority.HasValue ? 0 : target.InteractionOrder;
 
     // what frame rate should the program use
     private int ResolveFrameRate()
@@ -274,6 +333,7 @@ public class Engine : IDisposable
         Renderables.Clear();
         AssetTickers.Clear();
         GlobalHoverCount = 0;
+        _interactionSequence = 0;
         
         SdlWindowBridge.Quit();
         _isInitialized = false;

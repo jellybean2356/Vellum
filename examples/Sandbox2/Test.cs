@@ -34,9 +34,9 @@ public class Test
         };
         
         // make textures
-        var texture = new Draggable<Texture>(new Texture("assets/texture.png", 100, 100, overlay, 200, 200));
-        var gif = new Draggable<Texture>(new Texture("assets/gif.gif", 100, 100, overlay));
-        var gif2 = new Draggable<Texture>(new Texture("assets/gif2.gif", 500, 200, overlay, animationSpeed: 1f));
+        _ = new Draggable<Texture>(new Texture("assets/texture.png", 100, 100, overlay, 200, 200));
+        _ = new Draggable<Texture>(new Texture("assets/gif.gif", 100, 100, overlay));
+        _ = new Draggable<Texture>(new Texture("assets/gif2.gif", 500, 200, overlay, animationSpeed: 1f));
         
         engine.OnUpdate = Update;
         engine.Run();

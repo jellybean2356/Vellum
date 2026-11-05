@@ -429,6 +429,7 @@ button.OnClicked = () => Console.WriteLine("button clicked");
 | Member | Description |
 | --- | --- |
 | `TShape Shape` | Wrapped shape. Read-only reference; the shape's properties can still be changed. |
+| `int? ZPriority` | Optional fixed Z priority. Higher values render and receive input first. Leave it `null` to use automatic ordering, where the most recently interacted object moves to the front. |
 | `Action OnHoverEnter` | Invoked when the cursor enters the shape. |
 | `Action OnHoverExit` | Invoked when the cursor leaves the shape. |
 | `Action OnPressed` | Invoked when the left mouse button is pressed over the shape. |
@@ -440,6 +441,26 @@ button.OnClicked = () => Console.WriteLine("button clicked");
 | `void Dispose()` | Removes the wrapper from engine updates and clears its callbacks. |
 
 The callback properties accept `null`, which disables that callback.
+
+When several interactables overlap, Vellum resolves one input owner globally for the current pointer position. Objects that are not under the pointer still update their own animations, but they do not receive the same hover, press, release, or drag event. A captured drag keeps its input ownership until the mouse button is released.
+
+Use a fixed priority when recency should not change the order:
+
+```csharp
+var background = new Draggable<Rect>(
+    new Rect(20, 20, 240, 140, Color.Blue, window))
+{
+    ZPriority = 0
+};
+
+var alwaysTop = new Draggable<Circle>(
+    new Circle(80, 70, 45, Color.Yellow, window))
+{
+    ZPriority = 100
+};
+```
+
+Objects with no `ZPriority` use automatic recency ordering. Objects with the same fixed priority keep their creation order unless their priority is changed.
 
 ### `Draggable<TShape>`
 
