@@ -10,6 +10,14 @@
         <FileVersion>0.1.0.0</FileVersion>
         <InformationalVersion>0.1-alpha</InformationalVersion>
         <RootNamespace>Vellum</RootNamespace>
+
+        <PackageId>jellzz.vellum</PackageId>
+        <Version>0.1.0-alpha</Version>
+        <Authors>jellzz</Authors>
+        <Company>jellzz/vellum</Company>
+        <Description>Window management and overlay framework</Description>
+        <PackageTags>graphics, sdl3, skiasharp, game-engine, 2d</PackageTags>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
     </PropertyGroup>
 
     <ItemGroup>
