@@ -18,6 +18,8 @@
         <Description>Window management and overlay framework</Description>
         <PackageTags>graphics, sdl3, skiasharp, game-engine, 2d</PackageTags>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <RepositoryUrl>https://github.com/jellybean2356/Vellum</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
     </PropertyGroup>
 
     <ItemGroup>
