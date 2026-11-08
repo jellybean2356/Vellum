@@ -31,4 +31,8 @@
         <PackageReference Include="SkiaSharp.NativeAssets.macOS" Version="4.154.0" />
         <PackageReference Include="StbImageSharp" Version="2.30.15" />
     </ItemGroup>
+
+    <ItemGroup>
+      <Compile Remove="Geometry\ShapeExtensions.cs" />
+    </ItemGroup>
 </Project>

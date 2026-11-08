@@ -22,7 +22,7 @@ public class Test
         using var window4 = Window.Create("Vellum Engine4", 500, 500);
 
         // --- window 1: draggable circle---
-        var circle = new Draggable<Circle>(new Circle(100f, 100f, 50f, Color.Red, window1));
+        var circle = Engine.Add(new Draggable<Circle>(new Circle(100f, 100f, 50f, Color.Red, window1)));
         circle.OnClicked = async void () =>
         {
             circle.Shape.Color = Color.Blue;
@@ -31,7 +31,7 @@ public class Test
         };
 
         // --- window 2: interactive rect ---
-        var rect = new Interactive<Rect>(new Rect(100f, 100f, 100f, 100f, Color.Green, window2));
+        var rect = Engine.Add(new Interactive<Rect>(new Rect(100f, 100f, 100f, 100f, Color.Green, window2)));
         rect.OnClicked = async void () =>
         {
             rect.Shape.Color = Color.Blue;
@@ -40,7 +40,7 @@ public class Test
         };
         
         // --- window 3: draggable circle 2 ---
-        var circle2 = new Draggable<Circle>(new Circle(100f, 100f, 50f, Color.Blue, window3));
+        var circle2 = Engine.Add(new Draggable<Circle>(new Circle(100f, 100f, 50f, Color.Blue, window3)));
         circle2.OnClicked = async void () =>
         {
             circle2.Shape.Color = Color.White;
@@ -49,7 +49,7 @@ public class Test
         };
 
         // --- window 4: interactive rect 2 ---
-        var rect2 = new Interactive<Rect>(new Rect(100f, 100f, 100f, 100f, Color.Yellow, window4));
+        var rect2 = Engine.Add(new Interactive<Rect>(new Rect(100f, 100f, 100f, 100f, Color.Yellow, window4)));
         rect2.OnClicked = async void () =>
         {
             rect2.Shape.Color = Color.Magenta;

@@ -103,17 +103,13 @@ dotnet run --project examples\Sandbox2\Sandbox2.csproj
 
 The first example shows normal windows and interaction. The second one demonstrates a fullscreen transparent overlay with a draggable shape and animated assets.
 
-## the important ideas
+## important ideas
 
-### one engine loop
+### [Engine Overview](docs/Engine.md)
 
-Create one `Engine`, initialize it, create windows and renderables, then call `Run()`.
-
-`Engine.MaxFrameRate` controls the cap. With the default `0` value and `ClampToDisplayRefreshRate` enabled, Vellum follows the detected display refresh rate. A manual cap is still clamped to the monitor refresh rate unless that option is disabled.
-
-### shapes register themselves
-
-`Rect`, `Circle`, and `Texture` can be associated with a `Window`. Once associated, they are rendered by the engine automatically. `Renderer` is available when you want to draw directly yourself.
+- **One engine loop**: Create one `Engine`, initialize it, create windows and renderables, then call `Run()`.
+- **Object Registration**: Shapes like `Rect`, `Circle`, and `Texture` must be added to the engine to be rendered.
+- **Texture Scaling**: `Texture.Create` supports percentage (`"110%"`) and automatic aspect ratio (`"auto"`) scaling.
 
 ## project layout
 
@@ -130,11 +126,18 @@ The repository is split into a few focused areas rather than exposing its intern
 
 ## documentation
 
-The public API reference is here:
+The public API reference is split into logical areas:
 
-→ [Read the Vellum API docs](docs/API.md)
+- [Engine Overview](docs/Engine.md)
+- [Vellum.Core](docs/api/Core.md)
+- [Vellum.Platform](docs/api/Platform.md)
+- [Vellum.Graphics](docs/api/Graphics.md)
+- [Vellum.Geometry](docs/api/Geometry.md)
+- [Vellum.Input](docs/api/Input.md)
+- [Vellum.UI](docs/api/UI.md)
+- [Internal Implementation](docs/api/Internal.md)
 
-The reference covers the classes, methods, properties, interfaces, and enums that are accessible when using the compiled DLL. Native implementation details such as `NativeMethods`, `Win32Window`, and the SDL bridge are intentionally not included.
+The reference covers the classes, methods, properties, interfaces, and enums that are accessible when using the compiled DLL. Native implementation details are also included in the internal reference.
 
 ## current limitations
 

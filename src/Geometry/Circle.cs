@@ -1,6 +1,6 @@
 ﻿namespace Vellum.Geometry;
 
-public class Circle : IShape, IRenderable
+public class Circle : IShape, IRenderable, IColored
 {
     public float X { get; set; }
     public float Y { get; set; }
@@ -8,6 +8,7 @@ public class Circle : IShape, IRenderable
     
     public Window AssociatedWindow { get; set;}
     public Window LastDrawnWindow { get; set; }
+    public bool IsEnabled { get; set; } = true;
     
     public Color Color { get; set; }
 
@@ -18,8 +19,6 @@ public class Circle : IShape, IRenderable
         Radius = radius;
         Color = color ?? Color.White;
         AssociatedWindow = associatedWindow;
-        
-        Engine.Renderables.Add(this);
     }
 
     public bool ContainsPoint(float pointX, float pointY)

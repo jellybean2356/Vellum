@@ -14,6 +14,21 @@ public class Engine : IDisposable
     internal static readonly List<IUpdatable> Updatables = [];
     internal static readonly List<IRenderable> Renderables = [];
     internal static readonly List<IUpdatable> AssetTickers = [];
+    private static readonly List<IDisposable> Disposables = [];
+    
+    public static void Register(IRenderable renderable) => Renderables.Add(renderable);
+    public static void Unregister(IRenderable renderable) => Renderables.Remove(renderable);
+    
+    public static T Add<T>(T item)
+    {
+        if (item is IRenderable r) Register(r);
+        if (item is IUpdatable u) Updatables.Add(u);
+        if (item is IDisposable d) TrackDisposable(d);
+        return item;
+    }
+    
+    internal static void TrackDisposable(IDisposable disposable) => Disposables.Add(disposable);
+    internal static void UntrackDisposable(IDisposable disposable) => Disposables.Remove(disposable);
     
     internal static readonly List<Window> Windows = [];
     
@@ -229,7 +244,10 @@ public class Engine : IDisposable
                 .ThenBy(item => item.Index);
 
             foreach (var item in renderables)
+            {
+                if(!item.Renderable.IsEnabled) continue;
                 item.Renderable.Render(window.Renderer);
+            }
             window.Renderer.Present();
         }
         finally
@@ -284,7 +302,7 @@ public class Engine : IDisposable
         foreach (var target in targets)
         {
             var isInputTarget = ReferenceEquals(target, inputTarget);
-            target.SetInputState(isInputTarget, isInputTarget && pointerOverTargets.Contains(target));
+            target?.SetInputState(isInputTarget, isInputTarget && pointerOverTargets.Contains(target));
         }
     }
 
@@ -329,6 +347,10 @@ public class Engine : IDisposable
         {
             Windows[^1].Dispose();
         }
+        
+        foreach (var d in Disposables.ToArray()) d.Dispose();
+        Disposables.Clear();
+        
         Updatables.Clear();
         Renderables.Clear();
         AssetTickers.Clear();

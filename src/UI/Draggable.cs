@@ -1,7 +1,7 @@
 ﻿namespace Vellum.UI;
 
-public sealed class Draggable<TShape>(TShape bounds, Func<TShape, float, float, bool> customHitTest = null) : 
-    Interactive<TShape>(bounds, customHitTest) 
+public sealed class Draggable<TShape>(TShape bounds, int? zPriority = null, Func<TShape, float, float, bool> customHitTest = null) : 
+    Interactive<TShape>(bounds, zPriority, customHitTest) 
     where TShape : class, IShape
 {
     // private variables

@@ -4,11 +4,12 @@ using StbImageSharp;
 using SkiaSharp;
 
 // this file is temporary, animated texture will be soon separated from classic texture
-public class Texture : IShape, IRenderable, IUpdatable, IDisposable
+public class Texture : IShape, IRenderable, IUpdatable, IDisposable, IColored
 {
     public IntPtr Handle { get; private set; }
 
     public Rect DstRect { get; private set; }
+    public Color Color { get; set; }
 
     public float OriginalWidth { get; private set; }
     public float OriginalHeight { get; private set; }
@@ -20,6 +21,7 @@ public class Texture : IShape, IRenderable, IUpdatable, IDisposable
     
     public Window AssociatedWindow { get; set;}
     public Window LastDrawnWindow { get; set; }
+    public bool IsEnabled { get; set; } = true;
 
     // animation handling
     private readonly bool _isAnimated;
@@ -44,10 +46,23 @@ public class Texture : IShape, IRenderable, IUpdatable, IDisposable
     }
 
     public Texture(string path, float x, float y, Window window, float? w = null, float? h = null,
-        float animationSpeed = 1f)
+        float animationSpeed = 1f, Color? color = null) 
+        : this(path, x, y, window, w?.ToString(), h?.ToString(), animationSpeed, color)
+    {
+    }
+
+    public static Texture Create(string path, float x, float y, Window window, string w = null, string h = null,
+        float animationSpeed = 1f, Color? color = null)
+    {
+        return new Texture(path, x, y, window, w, h, animationSpeed, color);
+    }
+
+    private Texture(string path, float x, float y, Window window, string w = null, string h = null,
+        float animationSpeed = 1f, Color? color = null)
     {
         AssociatedWindow = window;
         AnimationSpeed = animationSpeed;
+        Color = color ?? Color.White;
         
         if (!File.Exists(path))
         {
@@ -95,8 +110,7 @@ public class Texture : IShape, IRenderable, IUpdatable, IDisposable
                 }
             }
 
-            var finalW = w ?? OriginalWidth;
-            var finalH = h ?? OriginalHeight;
+            var (finalW, finalH) = CalculateSize(w, h, OriginalWidth, OriginalHeight);
             DstRect = new Rect(x, y, finalW, finalH);
             
             Handle = SDL.CreateTexture(
@@ -120,8 +134,7 @@ public class Texture : IShape, IRenderable, IUpdatable, IDisposable
             OriginalWidth = image.Width;
             OriginalHeight = image.Height;
 
-            var finalW = w ?? image.Width;
-            var finalH = h ?? image.Height;
+            var (finalW, finalH) = CalculateSize(w, h, OriginalWidth, OriginalHeight);
             DstRect = new Rect(x, y, finalW, finalH);
             
             UpdateStaticTexture(image);
@@ -133,12 +146,8 @@ public class Texture : IShape, IRenderable, IUpdatable, IDisposable
         }
         
         SDL.SetTextureBlendMode(Handle, SDL.BlendMode.Blend);
-        
-        Engine.Renderables.Add(this);
-        if (_isAnimated)
-        {
-            Engine.Updatables.Add(this);
-        }
+        SDL.SetTextureColorMod(Handle, Color.R, Color.G, Color.B);
+        SDL.SetTextureAlphaMod(Handle, Color.A);
     }
     
     public bool ContainsPoint(float pointX, float pointY)
@@ -167,6 +176,9 @@ public class Texture : IShape, IRenderable, IUpdatable, IDisposable
     {
         if (Handle == IntPtr.Zero) return;
         LastDrawnWindow = renderer.Window;
+
+        SDL.SetTextureColorMod(Handle, Color.R, Color.G, Color.B);
+        SDL.SetTextureAlphaMod(Handle, Color.A);
 
         SDL.FRect nativeSrc = new() { X = 0f, Y = 0f, W = OriginalWidth, H = OriginalHeight };
         SDL.FRect nativeDst = new() { X = this.X, Y = this.Y, W = this.W, H = this.H };
@@ -212,10 +224,60 @@ public class Texture : IShape, IRenderable, IUpdatable, IDisposable
         {
             Engine.Updatables.Remove(this);
         }
-        Engine.Renderables.Remove(this);
+        Engine.Unregister(this);
+        Engine.UntrackDisposable(this);
 
         if (Handle == IntPtr.Zero) return;
         SDL.DestroyTexture(Handle);
         Handle = IntPtr.Zero;
+    }
+
+    private static (float w, float h) CalculateSize(string w, string h, float originalW, float originalH)
+    {
+        float finalW = originalW;
+        float finalH = originalH;
+
+        if (!string.IsNullOrEmpty(w))
+        {
+            if (w.Equals("auto", StringComparison.OrdinalIgnoreCase))
+            {
+                // handle later
+            }
+            else if (w.EndsWith("%"))
+            {
+                finalW = float.Parse(w.Replace("%", "")) / 100f * originalW;
+            }
+            else
+            {
+                finalW = float.Parse(w);
+            }
+        }
+
+        if (!string.IsNullOrEmpty(h))
+        {
+            if (h.Equals("auto", StringComparison.OrdinalIgnoreCase))
+            {
+                // handle later
+            }
+            else if (h.EndsWith("%"))
+            {
+                finalH = float.Parse(h.Replace("%", "")) / 100f * originalH;
+            }
+            else
+            {
+                finalH = float.Parse(h);
+            }
+        }
+
+        if (w?.Equals("auto", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            finalW = finalH / originalH * originalW;
+        }
+        if (h?.Equals("auto", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            finalH = finalW / originalW * originalH;
+        }
+
+        return (finalW, finalH);
     }
 }

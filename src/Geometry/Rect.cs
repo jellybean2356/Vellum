@@ -1,6 +1,6 @@
 ﻿namespace Vellum.Geometry;
 
-public class Rect : IShape, IRenderable
+public class Rect : IShape, IRenderable, IColored
 {
     public float X { get; set; }
     public float Y { get; set; }
@@ -9,6 +9,7 @@ public class Rect : IShape, IRenderable
     
     public Window AssociatedWindow { get; set;}
     public Window LastDrawnWindow { get; set; }
+    public bool IsEnabled { get; set; } = true;
     
     public Color Color { get; set; }
 
@@ -20,8 +21,6 @@ public class Rect : IShape, IRenderable
         H = h;
         Color = color ?? Color.White;
         AssociatedWindow = associatedWindow;
-        
-        if (associatedWindow != null) Engine.Renderables.Add(this);
     }
 
     // ===================================

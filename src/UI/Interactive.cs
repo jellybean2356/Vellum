@@ -1,9 +1,59 @@
-﻿namespace Vellum.UI;
+﻿using Vellum.Graphics;
 
-public class Interactive<TShape> : IUpdatable, IDisposable, IMouseCapture, IInteractiveTarget
+namespace Vellum.UI;
+
+public class Interactive<TShape> : IUpdatable, IDisposable, IInteractiveTarget, IRenderable
     where TShape : class, IShape
 {
     public TShape Shape { get; }
+    public bool IsEnabled
+    {
+        get => (Shape as IRenderable)?.IsEnabled ?? true;
+        set
+        {
+            if (Shape is IRenderable renderable)
+            {
+                renderable.IsEnabled = value;
+            }
+        }
+    }
+    public Window AssociatedWindow
+    {
+        get => (Shape as IRenderable)?.AssociatedWindow;
+        set
+        {
+            if (Shape is IRenderable renderable)
+            {
+                renderable.AssociatedWindow = value;
+            }
+        }
+    }
+
+    public void Render(Renderer renderer)
+    {
+        if (Shape is IRenderable renderable) renderable.Render(renderer);
+    }
+    public float X
+    {
+        get => Shape.X;
+        set => Shape.X = value;
+    }
+    public float Y
+    {
+        get => Shape.Y;
+        set => Shape.Y = value;
+    }
+    public Color Color
+    {
+        get => (Shape as IColored)?.Color ?? Color.White;
+        set
+        {
+            if (Shape is IColored colored)
+            {
+                colored.Color = value;
+            }
+        }
+    }
     protected bool IsHovered;
     private Window _hoveredWindow;
     private Window _capturedWindow;
@@ -24,7 +74,7 @@ public class Interactive<TShape> : IUpdatable, IDisposable, IMouseCapture, IInte
 
     private readonly Func<TShape, float, float, bool> _customHitTest;
 
-    public int? ZPriority { get; set; }
+    public int? ZPriority { get; }
 
     public Action OnHoverEnter { get; set;}
     public Action OnHoverExit { get; set; }
@@ -32,19 +82,16 @@ public class Interactive<TShape> : IUpdatable, IDisposable, IMouseCapture, IInte
     public Action OnReleased { get; set; }
     public Action OnClicked { get; set; }
     
-    public Interactive(TShape bounds, Func<TShape, float, float, bool> customHitTest = null)
+    public Interactive(TShape bounds, int? zPriority = null, Func<TShape, float, float, bool> customHitTest = null)
     {
         Shape = bounds;
+        ZPriority = zPriority;
         _customHitTest = customHitTest;
         
         if (bounds is IUpdatable updatableShape)
         {
             Engine.Updatables.Remove(updatableShape);
         }
-        
-
-        // add to engines updatables
-        Engine.Updatables.Add(this);
     }
 
     protected bool HasInputPriority => _inputAllowed;
@@ -91,7 +138,7 @@ public class Interactive<TShape> : IUpdatable, IDisposable, IMouseCapture, IInte
             if (wasMousePressed && _capturedWindow == null)
             {
                 _capturedWindow = win;
-                Engine.MarkInteraction((IInteractiveTarget)this);
+                Engine.MarkInteraction(this);
                 OnPressed?.Invoke();
             }
 
@@ -142,6 +189,7 @@ public class Interactive<TShape> : IUpdatable, IDisposable, IMouseCapture, IInte
     public void Dispose()
     {
         Engine.Updatables.Remove(this);
+        Engine.UntrackDisposable(this);
         _capturedWindow = null;
         if (IsHovered)
         {
